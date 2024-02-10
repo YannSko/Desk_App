@@ -9,3 +9,4 @@ opencv
 numpy
 python-docx
 opencv-python
+ conda install -c conda-forge ta-lib
