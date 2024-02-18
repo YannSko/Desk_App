@@ -1,4 +1,6 @@
 import psycopg2
+from psycopg2 import sql
+import re
 
 hostname = 'localhost'
 database = 'First_test'
@@ -20,42 +22,72 @@ def connect_to_database():
         print(error)
         return None
 
-def create_table():
+# Function to sanitize column names
+def sanitize_column_name(name):
+    # Replace non-alphanumeric characters with underscores
+    return re.sub(r'\W+', '_', name)
+
+# Function to create table dynamically from JSON keys
+def create_table(table_name, json_input):
     conn = connect_to_database()
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute("CREATE TABLE IF NOT EXISTS test_table (id SERIAL PRIMARY KEY, name VARCHAR, age INTEGER);")
+                # Sanitize and validate column names
+                columns = set()
+                for key, value in json_input.items():
+                    if isinstance(value, dict):
+                        for inner_key in value.keys():
+                            columns.add(sanitize_column_name(inner_key))
+                    else:
+                        columns.add(sanitize_column_name(key))
+
+                # Construct SQL query
+                columns_definition = [sql.Identifier(column) + sql.SQL(" VARCHAR") for column in columns]
+                query = sql.SQL("CREATE TABLE IF NOT EXISTS {} (id SERIAL PRIMARY KEY, {});").format(
+                    sql.Identifier(table_name),
+                    sql.SQL(", ").join(columns_definition)
+                )
+
+                # Execute query
+                cur.execute(query)
+                conn.commit()
+
+                print(f"Table {table_name} created successfully.")
+        except Exception as error:
+            print("Error:", error)
+        finally:
+            conn.close()
+
+
+
+def insert_data(table_name, **kwargs):
+    conn = connect_to_database()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                columns = ", ".join(kwargs.keys())
+                placeholders = ", ".join(["%s"] * len(kwargs))
+                values = tuple(kwargs.values())
+                cur.execute("INSERT INTO {} ({}) VALUES ({});".format(table_name, columns, placeholders), values)
                 conn.commit()
         except Exception as error:
             print(error)
         finally:
             conn.close()
 
-def insert_data(name, age):
-    conn = connect_to_database()
-    if conn:
-        try:
-            with conn.cursor() as cur:
-                cur.execute("INSERT INTO test_table (name, age) VALUES (%s, %s);", (name, age))
-                conn.commit()
-        except Exception as error:
-            print(error)
-        finally:
-            conn.close()
-
-def get_data_x(x=None, columns=None):
+def get_data_x(table_name, x=None, columns=None):
     conn = connect_to_database()
     if conn:
         try:
             with conn.cursor() as cur:
                 if columns:
-                    cur.execute("SELECT {} FROM test_table LIMIT %s;".format(", ".join(columns)), (x,))
+                    cur.execute("SELECT {} FROM {} LIMIT %s;".format(", ".join(columns), table_name), (x,))
                 else:
                     if x:
-                        cur.execute("SELECT * FROM test_table LIMIT %s;", (x,))
+                        cur.execute("SELECT * FROM {} LIMIT %s;".format(table_name), (x,))
                     else:
-                        cur.execute("SELECT * FROM test_table;")
+                        cur.execute("SELECT * FROM {};".format(table_name))
                 rows = cur.fetchall()
                 return rows
         except Exception as error:
@@ -63,16 +95,18 @@ def get_data_x(x=None, columns=None):
         finally:
             conn.close()
 
-def update_data_x(x=None, id=None, new_name=None, new_age=None):
+def update_data_x(table_name, x=None, id=None, **kwargs):
     conn = connect_to_database()
     if conn:
         try:
             with conn.cursor() as cur:
-                if id and new_name is not None and new_age is not None:
+                if id and kwargs:
+                    set_values = ", ".join(["{} = %s".format(key) for key in kwargs.keys()])
+                    values = tuple(kwargs.values()) + (id,)
                     if x:
-                        cur.execute("UPDATE test_table SET name = %s, age = %s WHERE id = %s LIMIT %s;", (new_name, new_age, id, x))
+                        cur.execute("UPDATE {} SET {} WHERE id = %s LIMIT %s;".format(table_name, set_values), values + (x,))
                     else:
-                        cur.execute("UPDATE test_table SET name = %s, age = %s WHERE id = %s;", (new_name, new_age, id))
+                        cur.execute("UPDATE {} SET {} WHERE id = %s;".format(table_name, set_values), values)
                     conn.commit()
                 else:
                     print("Missing parameters.")
@@ -80,6 +114,7 @@ def update_data_x(x=None, id=None, new_name=None, new_age=None):
             print(error)
         finally:
             conn.close()
+
 
 def delete_data_x(x=None, id=None):
     conn = connect_to_database()
