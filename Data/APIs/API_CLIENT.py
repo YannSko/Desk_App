@@ -48,7 +48,8 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
     oil_data_future = executor.submit(oil_call, url_oil, "Oil_data.json")
     
     # Crypto 
-    crypto_futures = [executor.submit(crypto_call, base_url_crypto.format(symbol), f"{symbol}_crypto_data.json") for symbol in crypto_symbols]
+    crypto_futures = [executor.submit(crypto_call, base_url_crypto, f"{symbol}_crypto_data.json") for symbol in crypto_symbols]
+
 
 # RESULT
 data_forex = forex_data_future.result()
