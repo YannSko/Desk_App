@@ -1,31 +1,33 @@
-from database_utils import * 
+import json
+from database_utils import *
+import time
 
-# Créer la table si elle n'existe pas
-create_table()
+# Prompt the user for the path to the JSON file
+file_path = input("Enter the path to the JSON file: ")
 
-# Insérer des données dans la table
-insert_data("Alice", 25)
-insert_data("Bob", 30)
-insert_data("Charlie", 35)
+try:
+    with open(file_path, 'r') as file:
+        input_json = json.load(file)
+except FileNotFoundError:
+    print("File not found. Please enter a valid file path.")
+    exit()
 
-# Obtenir toutes les données
-all_data = get_data_x()
-print("Toutes les données :")
-print(all_data)
+# Example table name
+table_name = "Gang"
 
-# Obtenir les deux premières lignes
-limited_data = get_data_x(x=2)
-print("\nDeux premières lignes :")
-print(limited_data)
+# Create table using the JSON input
+create_table_from_json(table_name, input_json)
 
-# Mettre à jour les données de la deuxième ligne
-update_data_x(id=2, new_name="Robert", new_age=32)
+# Insert nested data into the table
+insert_nested_data(table_name, input_json)
 
-# Supprimer la première ligne
-delete_data_x(id=1)
+time.sleep(5)
+# Retrieve and print data from the table
+data = get_data(table_name)
+print("Retrieved data:", data)
 
-drop_table("test_table")
+# Update data in the table (example)
+update_data(table_name, 1, {"age": 31})
 
-# Agréger l'âge moyen des trois premières personnes
-average_age = aggregate_data("AVG", "age", x=3)
-print("\nÂge moyen des trois premières personnes :", average_age)
+# Delete data from the table (example)
+delete_data(table_name, 1)
