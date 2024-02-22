@@ -2,32 +2,27 @@ import json
 from database_utils import *
 import time
 
-# Prompt the user for the path to the JSON file
-file_path = input("Enter the path to the JSON file: ")
 
-try:
-    with open(file_path, 'r') as file:
-        input_json = json.load(file)
-except FileNotFoundError:
-    print("File not found. Please enter a valid file path.")
-    exit()
 
-# Example table name
-table_name = "abudl"
+
 
 # Create table using the JSON input
-create_table_from_json(table_name, input_json)
+create_table_from_json()
 
 # Insert nested data into the table
-insert_nested_data(table_name, input_json)
+insert_nested_data()
 
-time.sleep(5)
+time.sleep(2)
 # Retrieve and print data from the table
-data = get_data_x(table_name)
+data = get_data_x()
 print("Retrieved data:", data)
 
-# Update data in the table (example)
-update_data(table_name, 1, {"age": 31})
+data2 = get_data_x()
+print("Retrieved data:", data2)
+data3 = get_data_x()
+print("Retrieved data:", data3)
 
-# Delete data from the table (example)
-delete_data(table_name, 1)
+
+
+
+
