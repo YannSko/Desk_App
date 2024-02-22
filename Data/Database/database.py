@@ -13,7 +13,7 @@ except FileNotFoundError:
     exit()
 
 # Example table name
-table_name = "Gang"
+table_name = "abudl"
 
 # Create table using the JSON input
 create_table_from_json(table_name, input_json)
@@ -23,7 +23,7 @@ insert_nested_data(table_name, input_json)
 
 time.sleep(5)
 # Retrieve and print data from the table
-data = get_data(table_name)
+data = get_data_x(table_name)
 print("Retrieved data:", data)
 
 # Update data in the table (example)

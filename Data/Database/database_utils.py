@@ -96,6 +96,62 @@ def get_data(table_name, limit=None):
             print(error)
         finally:
             conn.close()
+def get_data_x(table_name):
+    conn = connect_to_database()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                # Récupérer les noms de colonnes de la table
+                cur.execute(sql.SQL("SELECT column_name FROM information_schema.columns WHERE table_name = %s;"), (table_name,))
+                columns = [row[0] for row in cur.fetchall()]
+
+                print("Colonnes disponibles dans la table {}:".format(table_name))
+                for column in columns:
+                    print(column)
+
+                # Demander à l'utilisateur de spécifier les colonnes
+                selected_columns = input("Entrez les noms des colonnes séparés par des virgules : column espace virgule espace column  (ou laissez vide pour toutes les colonnes) : ")
+                selected_columns = [col.strip() for col in selected_columns.split(",")] if selected_columns else None
+
+                # Récupérer le nombre total de lignes dans la table
+                cur.execute(sql.SQL("SELECT count(*) FROM public.{};").format(sql.Identifier(table_name)))
+                total_rows = cur.fetchone()[0]
+
+                # Demander à l'utilisateur le nombre total de données à récupérer
+                total_data = int(input("Entrez le nombre total de données que vous souhaitez récupérer (0 pour tout récupérer) : "))
+                if total_data <= 0 or total_data > total_rows:
+                    total_data = total_rows
+
+                # Demander à l'utilisateur l'ID de départ
+                start_id = int(input("Entrez l'ID de départ (1 pour commencer) : "))
+                if start_id <= 0:
+                    start_id = 1
+
+                # Demander à l'utilisateur l'ID de fin si le nombre total n'est pas 1
+                if total_data != 1:
+                    end_id = int(input("Entrez l'ID de fin (0 pour terminer) : "))
+                    if end_id <= 0 or end_id > total_rows:
+                        end_id = total_rows
+                else:
+                    end_id = start_id
+
+                # Construire la requête SQL en fonction des intervalles d'IDs et des colonnes sélectionnées
+                if selected_columns:
+                    columns_sql = sql.SQL(", ").join(map(sql.Identifier, selected_columns))
+                    query = sql.SQL("SELECT {} FROM public.{} WHERE id BETWEEN %s AND %s;").format(columns_sql, sql.Identifier(table_name))
+                else:
+                    query = sql.SQL("SELECT * FROM public.{} WHERE id BETWEEN %s AND %s;").format(sql.Identifier(table_name))
+                
+                cur.execute(query, (start_id, end_id))
+                rows = cur.fetchall()
+                return rows
+        except Exception as error:
+            print(error)
+        finally:
+            conn.close()
+
+
+
 
 
 def update_data(table_name, id, data):
