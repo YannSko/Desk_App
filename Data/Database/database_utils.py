@@ -201,6 +201,99 @@ def insert_forex_data_json():
         finally:
             conn.close()
 
+################################################ CRYPTO####################################################
+            
+def insert_crypto_data_json():
+    conn = connect_to_database()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                table_name = input("Enter the table name: ")
+                while not isinstance(table_name, str):
+                    print("Table name must be a string.")
+                    table_name = input("Enter the table name: ")
+
+                file_path = input("Enter the JSON file path: ")
+
+                try:
+                    with open(file_path, 'r') as file:
+                        data = json.load(file)
+                        print("JSON data:", data)
+                except FileNotFoundError:
+                    print("File not found. Please enter a valid file path.")
+                    return
+
+                cur.execute(sql.SQL("SELECT column_name FROM information_schema.columns WHERE table_name = %s;"), (table_name,))
+                column_names = [row[0] for row in cur.fetchall()]
+                print("Column names in the database:", column_names)
+
+                def insert_data(data, digital_currency_code, digital_currency_name):
+                    for date, values in data.items():
+                        try:
+                            sanitized_columns = ['date'] + [sanitize_column_name(column) for column in values.keys()]
+                            sanitized_columns.extend(['Digital_Currency_Code', 'Digital_Currency_Name'])
+                            columns = ', '.join(map(str, sanitized_columns))
+                            placeholders = ', '.join(['%s'] * len(sanitized_columns))
+                            
+                            query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                                sql.Identifier(table_name),
+                                sql.SQL(', ').join(map(sql.Identifier, sanitized_columns)),
+                                sql.SQL(placeholders)
+                            )
+                            
+                            print("Query before execution:", cur.mogrify(query, [date] + list(values.values()) + [digital_currency_code, digital_currency_name]))
+                            
+                            cur.execute(query, [date] + list(values.values()) + [digital_currency_code, digital_currency_name])
+                        except psycopg2.Error as error:
+                            if error.pgcode == '42P01':  # Syntax error
+                                print("Syntax error in SQL query:", error)
+                            elif error.pgcode == '23505':  # Constraint violation
+                                print("Constraint violation:", error)
+                            elif error.pgcode == '55P03':  # Concurrent lock error
+                                print("Concurrent lock error:", error)
+                            elif error.pgcode == '08000':  # Connection error
+                                print("Connection error:", error)
+                            elif error.pgcode == '25P02':  # Transaction parameter error
+                                print("Transaction parameter error:", error)
+                            else:
+                                print("Other database error:", error)
+                        except Exception as e:
+                            print(f"Error inserting data for date {date}: {e}")
+                            continue
+                
+                meta_data = data.get("Meta Data", {})
+                digital_currency_code = meta_data.get("2. Digital Currency Code")
+                digital_currency_name = meta_data.get("3. Digital Currency Name")
+                
+
+                if "Time Series (Digital Currency Monthly)" in data:
+                    time_series_data = data["Time Series (Digital Currency Monthly)"]
+                    
+                    insert_data(time_series_data, digital_currency_code, digital_currency_name)
+                    conn.commit()
+                    print("Data inserted successfully.")
+                    print("Column names in the database:", column_names)
+                else:
+                    print("No 'Time Series (Digital Currency Monthly)' data found in the JSON.")
+
+        except psycopg2.Error as error:
+            if error.pgcode == '42P01':  # Syntax error
+                print("Syntax error in SQL query:", error)
+            elif error.pgcode == '23505':  # Constraint violation
+                print("Constraint violation:", error)
+            elif error.pgcode == '55P03':  # Concurrent lock error
+                print("Concurrent lock error:", error)
+            elif error.pgcode == '08000':  # Connection error
+                print("Connection error:", error)
+            elif error.pgcode == '25P02':  # Transaction parameter error
+                print("Transaction parameter error:", error)
+            else:
+                print("Other database error:", error)
+        except Exception as error:
+            print("An unexpected error occurred:", error)
+        finally:
+            conn.close()
+
 
 
 
