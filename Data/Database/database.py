@@ -12,13 +12,15 @@ import time
 
 #create_table()
 #create_table()
-#create_table()
+create_table()
 # Create table using the JSON inputF
 #create_table_from_json()F
 
 # Insert nested data into the tableF
-insert_crypto_data_json()
+#insert_crypto_data_json()
 #insert_forex_data_json()
+insert_data_json()
+
 
 #time.sleep(2)
 # Retrieve and print data from the tableF

@@ -295,6 +295,73 @@ def insert_crypto_data_json():
             conn.close()
 
 
+#### JSON CLASSIQUE as Commodities_datas
+
+def insert_data_json():
+    conn = connect_to_database()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                table_name = input("Enter the table name: ")
+                while not isinstance(table_name, str):
+                    print("Table name must be a string.")
+                    table_name = input("Enter the table name: ")
+
+                file_path = input("Enter the JSON file path: ")
+
+                try:
+                    with open(file_path, 'r') as file:
+                        data = json.load(file)
+                        print("JSON data:", data)
+                except FileNotFoundError:
+                    print("File not found. Please enter a valid file path.")
+                    return
+
+                cur.execute(sql.SQL("SELECT column_name FROM information_schema.columns WHERE table_name = %s;"), (table_name,))
+                column_names = [row[0] for row in cur.fetchall()]
+                print("Column names in the database:", column_names)
+
+                def insert_data(data):
+                    for item in data['data']:
+                        try:
+                            date = item['date']
+                            value = item['value']
+                            query = sql.SQL("INSERT INTO {} (id, date, value) VALUES (DEFAULT, %s, %s)").format(
+                                sql.Identifier(table_name))
+                            
+                            print("Query before execution:", cur.mogrify(query, (date, value)))
+                            
+                            cur.execute(query, (date, value))
+                        except psycopg2.Error as error:
+                            if error.pgcode == '42P01':  # Syntax error
+                                print("Syntax error in SQL query:", error)
+                            elif error.pgcode == '23505':  # Constraint violation
+                                print("Constraint violation:", error)
+                            elif error.pgcode == '55P03':  # Concurrent lock error
+                                print("Concurrent lock error:", error)
+                            elif error.pgcode == '08000':  # Connection error
+                                print("Connection error:", error)
+                            elif error.pgcode == '25P02':  # Transaction parameter error
+                                print("Transaction parameter error:", error)
+                            else:
+                                print("Other database error:", error)
+                        except Exception as e:
+                            print(f"Error inserting data for date {date}: {e}")
+                            continue
+                
+                if 'data' in data:
+                    insert_data(data)
+                    conn.commit()
+                    print("Data inserted successfully.")
+                    print("Column names in the database:", column_names)
+                else:
+                    print("No 'data' found in the JSON.")
+        finally:
+            conn.close()
+
+        
+
+
 
 
 
