@@ -3,22 +3,25 @@ from database_utils import *
 import time
 
 
-update_data()
-update_data()
-update_data()
+#update_data()
+#update_data()
+#update_data()
 #delete_data()
 #delete_data()
 #delete_data()
 
+#create_table()
+#create_table()
+create_table()
+# Create table using the JSON inputF
+#create_table_from_json()F
 
-# Create table using the JSON input
-#create_table_from_json()
-
-# Insert nested data into the table
+# Insert nested data into the tableF
 #insert_nested_data()
+insert_forex_data_json()
 
 #time.sleep(2)
-# Retrieve and print data from the table
+# Retrieve and print data from the tableF
 #data = get_data_x()
 #print("Retrieved data:", data)
 

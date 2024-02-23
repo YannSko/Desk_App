@@ -1,0 +1,9 @@
+C:\Users\yskon\Desktop\Desk_App\Data\Database\Forex_data.json
+
+Pour crypto :
+
+C:\Users\yskon\Desktop\Desk_App\Data\APIs\crypto_data\AAVE_crypto_data.json
+
+pour COmmidiies:
+
+C:\Users\yskon\Desktop\Desk_App\Data\Commodities_data.json

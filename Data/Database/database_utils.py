@@ -24,46 +24,70 @@ def connect_to_database():
         return None
 
 # Function to sanitize column names
+# Fonction pour nettoyer les noms de colonnes
 def sanitize_column_name(name):
-    # Replace non-alphanumeric characters with underscores
-    return re.sub(r'\W+', '_', name)
+    # Remplacer les caractères spéciaux et les espaces par des underscores
+    sanitized_name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    return sanitized_name
 
-def create_table_from_json():
-    
+# Créer une table à partir d'un fichier JSON
+def create_table():
     conn = connect_to_database()
-    table_name = input("Enter the table name: ")
-    while not isinstance(table_name, str):
-        print("Table name must be a string.")
-        table_name = input("Enter the table name: ")
-    file_path = input("Enter the path to the JSON file: ")
-
-    try:
-        with open(file_path, 'r') as file:
-            json_input = json.load(file)
-    except FileNotFoundError:
-        print("File not found. Please enter a valid file path.")
-        
     if conn:
         try:
             with conn.cursor() as cur:
-                # Sanitize and validate column names
-                columns = set()
-                for key, value in json_input.items():
-                    if isinstance(value, list):
-                        for item in value:
-                            for inner_key in item.keys():
-                                columns.add(sanitize_column_name(inner_key))
-                    else:
-                        columns.add(sanitize_column_name(key))
+                table_name = input("Enter the table name: ")
+                while not isinstance(table_name, str):
+                    print("Table name must be a string.")
+                    table_name = input("Enter the table name: ")
 
-                # Construct SQL query
+                file_path = input("Enter the path to the JSON file: ")
+
+                try:
+                    with open(file_path, 'r') as file:
+                        json_input = json.load(file)
+                except FileNotFoundError:
+                    print("File not found. Please enter a valid file path.")
+                    return
+                
+                # Fonction pour récursivement créer des colonnes
+                def process_json(data):
+                    for key, value in data.items():
+                        if isinstance(value, dict):
+                            process_json(value)
+                        else:
+                            columns.add(sanitize_column_name(key))
+                
+                time_series_data = None
+                if "Time Series (Digital Currency Monthly)" in json_input:
+                    time_series_data = json_input["Time Series (Digital Currency Monthly)"]
+                elif "Time Series FX (Monthly)" in json_input:
+                    time_series_data = json_input["Time Series FX (Monthly)"]
+                    meta_data = json_input.get("Meta Data", {})
+                    from_symbol = meta_data.get("2. From Symbol", "")
+                    to_symbol = meta_data.get("3. To Symbol", "")
+                elif "data" in json_input:
+                    time_series_data = {entry["date"]: {"value": entry["value"]} for entry in json_input["data"]}
+
+                if time_series_data is None:
+                    print("No time series data found in the JSON.")
+                    return
+
+                columns = set()
+                
+                process_json(time_series_data)
+
+                columns.add(sanitize_column_name("From Symbol"))
+                columns.add(sanitize_column_name("To Symbol"))
+                columns.add(sanitize_column_name("Digital Currency Code"))
+                columns.add(sanitize_column_name("Digital Currency Name"))
+
                 columns_definition = [sql.Identifier(column) + sql.SQL(" VARCHAR") for column in columns]
-                query = sql.SQL("CREATE TABLE IF NOT EXISTS {} (id SERIAL PRIMARY KEY, {});").format(
+                query = sql.SQL("CREATE TABLE IF NOT EXISTS {} (id SERIAL PRIMARY KEY, date DATE, {});").format(
                     sql.Identifier(table_name),
                     sql.SQL(", ").join(columns_definition)
                 )
 
-                # Execute query
                 cur.execute(query)
                 conn.commit()
 
@@ -73,24 +97,20 @@ def create_table_from_json():
         finally:
             conn.close()
 
+# Vérifier et supprimer les colonnes vides de la table
 def check_and_drop(table_name):
     conn = connect_to_database()
     if conn:
         try:
             with conn.cursor() as cur:
-                # Récupérer les noms de toutes les colonnes de la table
                 cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = %s", (table_name,))
                 column_names = [row[0] for row in cur.fetchall()]
 
-                # Vérifier chaque colonne
                 for column_name in column_names:
-                    # Sélectionner 10 lignes aléatoires de la colonne
                     cur.execute("SELECT {} FROM {} TABLESAMPLE SYSTEM(70)".format(column_name, table_name))
                     values = [row[0] for row in cur.fetchall()]
 
-                    # Vérifier si toutes les valeurs sont nulles
                     if all(value is None for value in values):
-                        # Supprimer la colonne si toutes les valeurs sont nulles
                         cur.execute("ALTER TABLE {} DROP COLUMN {}".format(table_name, column_name))
                         print("Column {} dropped.".format(column_name))
 
@@ -100,59 +120,95 @@ def check_and_drop(table_name):
         finally:
             conn.close()
 
-def insert_nested_data():
-    table_name = input("Enter the table name: ")
-    while not isinstance(table_name, str):
-        print("Table name must be a string.")
-        table_name = input("Enter the table name: ")
 
-    file_path = input("Enter the path to the JSON file: ")
+# Fonction pour insérer des données depuis un JSON
+# Fonction pour insérer des données depuis un JSON
 
-    try:
-        with open(file_path, 'r') as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        print("File not found. Please enter a valid file path.")
-        return
-
-    # Determine which columns contain only None values
-    empty_columns = set()
-    for item in data.get("data", []):
-        for key, value in item.items():
-            if value is None:
-                empty_columns.add(key)
-
+import re
+def insert_forex_data_json():
     conn = connect_to_database()
     if conn:
         try:
             with conn.cursor() as cur:
-                for item in data.get("data", []):
-                    # Exclude columns that contain only None values
-                    columns = [key for key, value in item.items() if key not in empty_columns]
-                    placeholders = ", ".join(["%s"] * len(columns))
-                    values = tuple(item[column] for column in columns)
-                    columns = ", ".join(map(sanitize_column_name, columns))
-                    query = sql.SQL("INSERT INTO {} ({}) VALUES ({});").format(
-                        sql.Identifier(table_name),
-                        sql.SQL(columns),
-                        sql.SQL(placeholders)
-                    )
-                    cur.execute(query, values)
+                table_name = input("Entrez le nom de la table : ")
+                while not isinstance(table_name, str):
+                    print("Le nom de la table doit être une chaîne de caractères.")
+                    table_name = input("Entrez le nom de la table : ")
+
+                file_path = input("Entrez le chemin du fichier JSON : ")
+
+                try:
+                    with open(file_path, 'r') as file:
+                        data = json.load(file)
+                        print("Données JSON :", data)
+                except FileNotFoundError:
+                    print("Fichier non trouvé. Veuillez entrer un chemin de fichier valide.")
+                    return
+
+                # Récupérer les noms de colonnes de la table dans la base de données
+                cur.execute(sql.SQL("SELECT column_name FROM information_schema.columns WHERE table_name = %s;"), (table_name,))
+                column_names = [row[0] for row in cur.fetchall()]
+                print("Noms de colonnes de la base de données :", column_names)
+
+                def insert_data(data, to_symbol, from_symbol):
+                    for date, values in data.items():
+                        try:
+                            sanitized_columns = ['date'] + [sanitize_column_name(column) for column in values.keys()]
+                            sanitized_columns.extend(['To_Symbol', 'From_Symbol'])
+                            columns = ', '.join(map(str, sanitized_columns))
+                            placeholders = ', '.join(['%s'] * len(sanitized_columns))
+                            
+                            query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                                sql.Identifier(table_name),
+                                sql.SQL(', ').join(map(sql.Identifier, sanitized_columns)),
+                                sql.SQL(placeholders)
+                            )
+                            
+                            # Vérification de la requête SQL avant l'exécution
+                            print("Requête SQL avant exécution :", cur.mogrify(query, [date] + list(values.values()) + [to_symbol, from_symbol]))
+                            
+                            # Exécution de la requête
+                            cur.execute(query, [date] + list(values.values()) + [to_symbol, from_symbol])
+                        except Exception as e:
+                            print(f"Erreur lors de l'insertion des données pour la date {date}: {e}")
+                            continue
+
+
+
+
+
                 
-                # Supprimer les colonnes ayant des valeurs nulles
-                for column in empty_columns:
-                    cur.execute(sql.SQL("ALTER TABLE {} DROP COLUMN {}").format(
-                        sql.Identifier(table_name),
-                        sql.Identifier(column)
-                    ))
+
+
+
                 
-                conn.commit()
-                print("Data inserted successfully.")
-                check_and_drop(table_name)
+                meta_data = data.get("Meta Data", {})
+                to_symbol = meta_data.get("3. To Symbol")
+                from_symbol = meta_data.get("2. From Symbol")
+
+                if "Time Series FX (Monthly)" in data:
+                    time_series_data = data["Time Series FX (Monthly)"]
+                    
+                    insert_data(time_series_data, to_symbol, from_symbol)
+                    conn.commit()
+                    print("Données insérées avec succès.")
+                else:
+                    print("Aucune donnée 'Time Series FX (Monthly)' trouvée dans le JSON.")
+
+
         except Exception as error:
             print(error)
         finally:
             conn.close()
+
+
+
+
+
+
+
+
+
 
 
 
