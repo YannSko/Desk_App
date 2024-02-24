@@ -2,6 +2,7 @@ import psycopg2
 from psycopg2 import sql
 import re 
 import json
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 hostname = 'localhost'
 database = 'First_test'
@@ -359,11 +360,157 @@ def insert_data_json():
         finally:
             conn.close()
 
-        
+
+######### Pour stocks data
+            
+# Fonction pour créer la table
+# Fonction pour créer la table à partir du JSON
+# Fonction pour lire les données JSON à partir d'un fichier
+def read_json_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print("File not found. Please enter a valid file path.")
+        return None
+    except json.JSONDecodeError as e:
+        print("Invalid JSON format:", e)
+        return None
+
+import logging
+import re
+
+# Configure logging
+logging.basicConfig(filename='error.log', level=logging.ERROR)
+
+# Function to format column names
+def format_column_name(name):
+    # Replace spaces with underscores
+    formatted_name = name.replace(' ', '_')
+    # Remove special characters except underscores
+    formatted_name = re.sub(r'[^a-zA-Z0-9_]', '', formatted_name)
+    # If the name starts with a number, prefix it with an underscore
+    if formatted_name[0].isdigit():
+        formatted_name = '_' + formatted_name
+    return formatted_name
+
+
+
+import time
+
+def create_tables_from_json():
+    file_path = input("Enter the JSON file path: ")
+    json_data = read_json_file(file_path)
+    if json_data is None:
+        return
+
+    conn = connect_to_database()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                # Create table for company characteristics
+                company_table_name = input("Enter the company table name: ")
+                
+                company_columns = 'id SERIAL PRIMARY KEY, ' + ", ".join(f'"{format_column_name(key)}" TEXT' for key in json_data['A'].keys())
+                company_query = f"CREATE TABLE {format_column_name(company_table_name)} ({company_columns})"
+                print(company_query)
+                cur.execute(company_query)
+                print("Company table creation initiated.")
+
+                # Wait until the company table is created
+                while True:
+                    cur.execute(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{format_column_name(company_table_name)}')")
+                    table_exists = cur.fetchone()[0]
+                    if table_exists:
+                        print("Company table created successfully.")
+                        break
+                    time.sleep(1)  # Wait for 1 second before checking again
+
+                # Create table for employees
+                employees_table_name = input("Enter the employees table name: ")
+                employees_columns = 'id SERIAL PRIMARY KEY, fk_company_id INTEGER, ' + ", ".join(f'"{format_column_name(key)}" TEXT' for key in json_data['A']['companyOfficers'][0].keys())
+                employees_query = f"CREATE TABLE {format_column_name(employees_table_name)} ({employees_columns}, FOREIGN KEY (fk_company_id) REFERENCES {format_column_name(company_table_name)}(id))"
+                print(employees_query)
+                cur.execute(employees_query)
+                print("Employees table creation initiated.")
+
+                # Wait until the employees table is created
+                while True:
+                    cur.execute(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{format_column_name(employees_table_name)}')")
+                    table_exists = cur.fetchone()[0]
+                    if table_exists:
+                        print("Employees table created successfully.")
+                        break
+                    time.sleep(1)  # Wait for 1 second before checking again
+
+                # Create table for financial data
+                financials_table_name = input("Enter the financials table name: ")
+                financials_columns = 'id SERIAL PRIMARY KEY, fk_company_id INTEGER, ' + ", ".join(f'"{format_column_name(key)}" TEXT' for key, value in json_data['A'].items() if key != 'companyOfficers' and key != '52WeekChange')
+                financials_query = f"CREATE TABLE {format_column_name(financials_table_name)} ({financials_columns}, FOREIGN KEY (fk_company_id) REFERENCES {format_column_name(company_table_name)}(id))"
+                print(financials_query)
+                cur.execute(financials_query)
+                print("Financials table creation initiated.")
+
+                # Wait until the financials table is created
+                while True:
+                    cur.execute(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{format_column_name(financials_table_name)}')")
+                    table_exists = cur.fetchone()[0]
+                    if table_exists:
+                        print("Financials table created successfully.")
+                        break
+                    time.sleep(1)  # Wait for 1 second before checking again
+
+                print("Data inserted successfully.")
+        except psycopg2.Error as e:
+            print("Error:", e)
+            logging.error(e)  # Log the error
+        finally:
+            conn.close()
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+# Fonction pour insérer les données depuis le JSON
+def insert_data_from_json():
+    table_name = input("Enter the table name: ")
+    file_path = input("Enter the JSON file path: ")
+    json_data = read_json_file(file_path)
+    if json_data is None:
+        return
+
+    try:
+        json_data = json.loads(json_data)
+    except json.JSONDecodeError as e:
+        print("Invalid JSON format:", e)
+        return
+
+    conn = connect_to_database()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                for key, value in json_data.items():
+                    query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                        sql.Identifier(table_name),
+                        sql.SQL(', ').join(sql.Identifier(name) for name in value.keys()),
+                        sql.SQL(', ').join(sql.Literal(val) for val in value.values())
+                    )
+                    cur.execute(query)
+                print("Data inserted successfully.")
+        except psycopg2.Error as e:
+            print("Error inserting data:", e)
+        finally:
+            conn.close()
 
 
 

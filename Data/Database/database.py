@@ -9,17 +9,18 @@ import time
 #delete_data()
 #delete_data()
 #delete_data()
-
+create_tables_from_json()
+#insert_data_from_json()
 #create_table()
 #create_table()
-create_table()
+#create_table()
 # Create table using the JSON inputF
-#create_table_from_json()F
+#create_table_from_json()
 
 # Insert nested data into the tableF
 #insert_crypto_data_json()
 #insert_forex_data_json()
-insert_data_json()
+#insert_data_json()
 
 
 #time.sleep(2)
@@ -29,7 +30,7 @@ insert_data_json()
 
 #data2 = get_data_x()
 #print("Retrieved data:", data2)
-#data3 = get_data_x()AA
+#data3 = get_data_x()
 #print("Retrieved data:", data3)
 
 #update_data()
