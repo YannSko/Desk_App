@@ -4,7 +4,8 @@ import re
 import json
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import pandas as pd
-
+from tkinter import Tk
+from tkinter import filedialog
 hostname = 'localhost'
 database = 'First_test'
 username = 'postgres'
@@ -29,13 +30,18 @@ def connect_to_database():
 
 def df_to_sql():
     conn = connect_to_database()
-    json_file_path = input("Enter the path to the JSON file: ")
+    root = Tk()
+    root.withdraw()  # Masquer la fenêtre principale
+    json_file_path = filedialog.askopenfilename(initialdir="C:/Users/YourUsername/Desktop", title="Select JSON file", filetypes=(("JSON files", "*.json"), ("All files", "*.*")))
     table_name = input("Enter the table name: ")
     try:
         # Read JSON file into a DataFrame
         with open(json_file_path, 'r') as file:
             data = json.load(file)
             df = pd.DataFrame.from_dict(data)
+
+        # Add 'id' column with sequential values
+        df.insert(0, 'id', range(1, 1 + len(df)))
 
         # Function to flatten nested dictionaries
         def flatten_dict(d):
@@ -82,6 +88,74 @@ def df_to_sql():
         if conn:
             conn.close()
 
+#################DF_sql big
+
+def create_table_from_df(df, table_name, conn):
+    try:
+        # Mapping des types de données Pandas vers les types de données PostgreSQL
+        type_mapping = {
+            "int64": "INTEGER",
+            "float64": "NUMERIC",
+            "object": "TEXT"
+        }
+        
+        # Récupérer les noms et types de colonnes
+        column_names = df.columns
+        column_types = [type_mapping.get(df[col].dtype.name, "TEXT") for col in df.columns]
+        
+        # Ajouter la colonne 'id' à la liste des noms de colonnes et 'INTEGER' à la liste des types de colonnes
+        column_names = ['id'] + list(column_names)
+        column_types = ['SERIAL'] + list(column_types)
+        
+        # Créer la requête de création de table
+        columns = ", ".join([f"{name} {type}" for name, type in zip(column_names, column_types)])
+        create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns})"
+        
+        # Exécuter la requête pour créer la table
+        with conn.cursor() as cur:
+            cur.execute(create_table_query)
+        
+        print(f"Table {table_name} created successfully.")
+    except Exception as e:
+        print("Error:", e)
+
+def df_to_sql_big():
+    json_file_path = input("Enter the path to the JSON file: ")
+    table_name = input("Enter the table name: ")
+    try:
+        conn = connect_to_database()
+        
+        # Charger les données JSON dans un DataFrame
+        with open(json_file_path, 'r') as file:
+            json_data = json.load(file)
+        data = json_data['data']['rows']
+        df = pd.DataFrame(data)
+        
+        # Créer la table si elle n'existe pas
+        create_table_from_df(df, table_name, conn)
+        
+        # Ajouter la colonne 'id' avec des valeurs séquentielles
+        df.insert(0, 'id', range(1, 1 + len(df)))
+        
+        # Convertir le DataFrame en liste de tuples
+        records = df.values.tolist()
+
+        # Créer une chaîne de requête d'insertion
+        placeholders = ", ".join(["%s"] * len(df.columns))
+        insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
+
+        # Exécuter la requête d'insertion pour chaque ligne dans le DataFrame
+        with conn.cursor() as cur:
+            cur.executemany(insert_query, records)
+        
+        # Valider la transaction
+        conn.commit()
+        print(f"DataFrame successfully saved to table {table_name} in the database.")
+    except Exception as e:
+        print("Error:", e)
+    finally:
+        if conn:
+            conn.close()
 
 
 

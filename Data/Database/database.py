@@ -10,20 +10,23 @@ import time
 #delete_data()
 #delete_data()
 #create_tables_from_json()
-#df_to_sql()
-df_to_sql_stocks()
+
+######### pour créer les tables et insérer direct
+#df_to_sql()## Commodities-Oil-Tout json simple
+#df_to_sql_big() ## Json avec header > data ( headers -rows)
 #insert_data_from_json()
-#create_table()
+#create_table()#create pour toutes les structs en gé
 #create_table()
 #create_table()
 # Create table using the JSON inputF
 #create_table_from_json()
 
 # Insert nested data into the tableF
-#insert_crypto_data_json()
-#insert_forex_data_json()
-#insert_data_json()
-
+#insert_crypto_data_json()### Spé struc pour les crypto_data.json
+#insert_forex_data_json()### spé structure forex
+#insert_data_json()# insert pour les structs simple como et oil
+data= get_data()
+print("data:", data)
 
 #time.sleep(2)
 # Retrieve and print data from the tableF
