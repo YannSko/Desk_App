@@ -83,6 +83,9 @@ def df_to_sql():
             conn.close()
 
 
+
+
+
 # Function to sanitize column names
 # Fonction pour nettoyer les noms de colonnes
 def sanitize_column_name(name):
