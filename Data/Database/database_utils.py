@@ -3,6 +3,7 @@ from psycopg2 import sql
 import re 
 import json
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+import pandas as pd
 
 hostname = 'localhost'
 database = 'First_test'
@@ -23,6 +24,64 @@ def connect_to_database():
     except Exception as error:
         print(error)
         return None
+
+
+
+def df_to_sql():
+    conn = connect_to_database()
+    json_file_path = input("Enter the path to the JSON file: ")
+    table_name = input("Enter the table name: ")
+    try:
+        # Read JSON file into a DataFrame
+        with open(json_file_path, 'r') as file:
+            data = json.load(file)
+            df = pd.DataFrame.from_dict(data)
+
+        # Function to flatten nested dictionaries
+        def flatten_dict(d):
+            flat_dict = {}
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    flat_dict.update(flatten_dict(value))
+                else:
+                    flat_dict[key] = value
+            return flat_dict
+
+        # Flatten nested dictionaries in DataFrame
+        for col in df.columns:
+            df[col] = df[col].apply(lambda x: flatten_dict(x) if isinstance(x, dict) else x)
+
+        # Split columns with nested dictionaries into separate columns
+        for col in df.columns:
+            if isinstance(df[col][0], dict):
+                expanded_df = df[col].apply(pd.Series)
+                expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
+                df = pd.concat([df, expanded_df], axis=1)
+                df.drop(columns=[col], inplace=True)
+
+        # Convert DataFrame to a list of tuples (each tuple represents a row)
+        data_list = [tuple(row) for row in df.to_numpy()]
+
+        # Create table if it does not exist
+        with conn.cursor() as cur:
+            create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} VARCHAR' for col in df.columns])})"
+            cur.execute(create_table_query)
+
+            # Insert data into the table
+            for row in data_list:
+                row = list(row)
+                row[-1] = str(row[-1])  # Convert last element (nested dict) to string
+                insert_query = f"INSERT INTO {table_name} VALUES ({', '.join(['%s'] * len(df.columns))})"
+                cur.execute(insert_query, row)
+
+        conn.commit()
+        print(f"DataFrame from {json_file_path} successfully saved to table {table_name} in the database.")
+    except Exception as e:
+        print("Error:", e)
+    finally:
+        if conn:
+            conn.close()
+
 
 # Function to sanitize column names
 # Fonction pour nettoyer les noms de colonnes
