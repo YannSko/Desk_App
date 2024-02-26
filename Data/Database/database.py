@@ -1,6 +1,7 @@
 import json
 from database_utils import *
 import time
+from data_process import convert_columns,  infer_data_type, infer_data_types
 
 
 #update_data()
@@ -12,7 +13,7 @@ import time
 #create_tables_from_json()
 
 ######### pour créer les tables et insérer direct
-df_to_sql()## Commodities-Oil-Tout json simple
+#df_to_sql_cxe()## Commodities-Oil-Tout json simple
 #df_to_sql_big() ## Json avec header > data ( headers -rows)
 #insert_data_from_json()
 #create_table()#create pour toutes les structs en gé
@@ -44,4 +45,12 @@ df_to_sql()## Commodities-Oil-Tout json simple
 
 
 
+#### test recup + treatment
 
+df = get_data()
+if isinstance(df, pd.DataFrame):
+    inferred_types = infer_data_types(df)
+    df = convert_columns(df, inferred_types)
+    print(df)
+else:
+    print("Error: df is not a DataFrame.")

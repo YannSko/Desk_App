@@ -1,29 +1,34 @@
 import pandas as pd
 import yfinance as yf
 import json
+import os
 
-# Lire le DataFrame depuis le fichier CSV
+
+# Load DataFrame
 df = pd.read_csv("nasdaq.csv")
 
-# Récupérer tous les symboles de votre DataFrame
+# Get list of symbols
 list_symbol = df['Symbol']
 
-# Initialiser un dictionnaire pour stocker les données de chaque symbole
+# Dictionary to store all stock data
 all_stocks_data = {}
 
-# Itérer sur chaque symbole
+# Loop through each symbol and retrieve data
 for symbol in list_symbol:
     try:
-        # Récupérer les données pour le symbole actuel
         stock_data = yf.Ticker(symbol)
         info = stock_data.info
         all_stocks_data[symbol] = info
-        print(f"Données récupérées pour {symbol}")
+        print(f"Data retrieved for {symbol}")
     except Exception as e:
-        print(f"Erreur lors de la récupération des données pour {symbol}: {e}")
+        print(f"Error retrieving data for {symbol}: {e}")
 
-# Enregistrer les données dans un fichier JSON
-with open("stocks_data.json", "w") as file:
+# Define the directory path
+directory = "apis/data_from_api"
+os.makedirs(directory, exist_ok=True)
+
+# Write data to JSON file
+with open(os.path.join(directory, "stocks_data.json"), "w") as file:
     json.dump(all_stocks_data, file)
 
-print("Les données pour tous les symboles ont été enregistrées dans le fichier stocks_data.json.")
+print("Data for all symbols has been saved in the file stocks_data.json.")

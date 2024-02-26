@@ -1,5 +1,17 @@
 import concurrent.futures
 from api_utils import APIClient, FOREX_API_KEY, COMMODITIES_API_KEY, OIL_API_KEY, CRYPTO_API_KEY
+import os
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get API keys from environment variables
+FOREX_API_KEY = os.getenv("FOREX_API_KEY")
+COMMODITIES_API_KEY = os.getenv("COMMODITIES_API_KEY")
+OIL_API_KEY = os.getenv("OIL_API_KEY")
+CRYPTO_API_KEY = os.getenv("CRYPTO_API_KEY")
 
 # instance client pour chaque API
 Forex_CLIENT = APIClient(FOREX_API_KEY)
@@ -23,6 +35,10 @@ def oil_call(url, filename):
 def crypto_call(url, filename):
     return Crypto_CLIENT.make_api_call_save_data(url, filename)
 
+# Dossier pour stocker les données téléchargées
+data_folder = 'data_from_api'
+os.makedirs(data_folder, exist_ok=True)
+
 # ALL LINKS WTF
 url_forex = f'https://www.alphavantage.co/query?function=FX_MONTHLY&from_symbol=EUR&to_symbol=USD&apikey={FOREX_API_KEY}'
 url_forex_change_base = f'https://www.alphavantage.co/query?function=FX_MONTHLY&from_symbol=EUR&to_symbol={{}}&apikey={FOREX_API_KEY}'
@@ -36,20 +52,19 @@ crypto_symbols = ['ETC', 'ZEC', 'ALGO', 'FIL', 'CHZ', 'DGB', 'MANA', 'ZRX', 'ENJ
 # Execute API calls concurrently
 with concurrent.futures.ThreadPoolExecutor() as executor:
     # Forex 
-    forex_data_future = executor.submit(forex_call, url_forex, "Forex_data.json")
+    forex_data_future = executor.submit(forex_call, url_forex, os.path.join(data_folder, "Forex_data.json"))
     
     # Forex  rates
-    forex_change_futures = [executor.submit(forex_change_call, url, f"Taux_de_change_{currency}_data.json") for url, currency in zip(urls_forex_change, forex_currencies)]
+    forex_change_futures = [executor.submit(forex_change_call, url, os.path.join(data_folder, f"Taux_de_change_{currency}_data.json")) for url, currency in zip(urls_forex_change, forex_currencies)]
     
     # Commodities
-    commodities_data_future = executor.submit(commodities_call, url_commodities, "Commodities_data.json")
+    commodities_data_future = executor.submit(commodities_call, url_commodities, os.path.join(data_folder, "Commodities_data.json"))
     
     # Oil 
-    oil_data_future = executor.submit(oil_call, url_oil, "Oil_data.json")
+    oil_data_future = executor.submit(oil_call, url_oil, os.path.join(data_folder, "Oil_data.json"))
     
     # Crypto 
-    crypto_futures = [executor.submit(crypto_call, base_url_crypto, f"{symbol}_crypto_data.json") for symbol in crypto_symbols]
-
+    crypto_futures = [executor.submit(crypto_call, base_url_crypto.format(symbol), os.path.join(data_folder, f"{symbol}_crypto_data.json")) for symbol in crypto_symbols]
 
 # RESULT
 data_forex = forex_data_future.result()

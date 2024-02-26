@@ -6,6 +6,11 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import pandas as pd
 from tkinter import Tk
 from tkinter import filedialog
+import csv
+import openpyxl
+import xml.etree.ElementTree as ET
+from tkinter import Tk, filedialog
+import psycopg2
 hostname = 'localhost'
 database = 'First_test'
 username = 'postgres'
@@ -28,7 +33,7 @@ def connect_to_database():
 
 
 
-def df_to_sql():
+def df_to_sql_j():
     conn = connect_to_database()
     root = Tk()
     root.withdraw()  # Masquer la fenêtre principale
@@ -157,15 +162,69 @@ def df_to_sql_big():
         if conn:
             conn.close()
 
-
-
-
-# Function to sanitize column names
-# Fonction pour nettoyer les noms de colonnes
 def sanitize_column_name(name):
-    # Remplacer les caractères spéciaux et les espaces par des underscores
+    # If column name is a date, wrap it in double quotes
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', name):
+        return f'"{name}"'
+    # Otherwise, sanitize the name to comply with SQL naming conventions
     sanitized_name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    sanitized_name = sanitized_name.strip('_')
     return sanitized_name
+
+def df_to_sql_cxe():
+    conn = connect_to_database()
+    root = Tk()
+    root.withdraw()  # Hide the main window
+    file_path = filedialog.askopenfilename(initialdir="C:/Users/YourUsername/Desktop", title="Select file",
+                                           filetypes=(("CSV files", "*.csv"), ("XML files", "*.xml"), ("Excel files", "*.xlsx")))
+    table_name = input("Enter the table name: ")
+    try:
+        if file_path.endswith('.csv'):
+            df = pd.read_csv(file_path)
+        elif file_path.endswith('.xml'):
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+            data = []
+            for elem in root:
+                data.append(elem.attrib)
+            df = pd.DataFrame(data)
+        elif file_path.endswith('.xlsx'):  # Add handling for Excel files
+            df = pd.read_excel(file_path)
+        else:
+            print("Unsupported file format.")
+            return
+
+        # Add 'id' column with sequential values
+        df.insert(0, 'id', range(1, 1 + len(df)))
+
+        # Sanitize column names to comply with SQL naming conventions
+        df.columns = [sanitize_column_name(col) for col in df.columns]
+
+        # Convert DataFrame to a list of tuples (each tuple represents a row)
+        data_list = [tuple(row) for row in df.to_numpy()]
+
+        # Create table if it does not exist
+        with conn.cursor() as cur:
+            # Handle column names with special characters or spaces
+            create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} VARCHAR' for col in df.columns])})"
+            cur.execute(create_table_query)
+
+            # Insert data into the table
+            for row in data_list:
+                row = list(row)
+                row[-1] = str(row[-1])  # Convert last element (nested dict) to string
+                # Handle column names with special characters or spaces
+                insert_query = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in df.columns])}) VALUES ({', '.join(['%s'] * len(df.columns))})"
+                cur.execute(insert_query, row)
+
+        conn.commit()
+        print(f"DataFrame from {file_path} successfully saved to table {table_name} in the database.")
+    except Exception as e:
+        print("Error:", e)
+    finally:
+        if conn:
+            conn.close()
+    
 
 # Créer une table à partir d'un fichier JSON
 def create_table():
@@ -669,7 +728,10 @@ def get_data(limit=None):
                 else:
                     cur.execute(sql.SQL("SELECT * FROM public.{};").format(sql.Identifier(table_name)))
                 rows = cur.fetchall()
-                return rows
+                column_names = [desc[0] for desc in cur.description]
+                
+                df = pd.DataFrame(rows, columns=column_names)
+                return df
         except Exception as error:
             print(error)
         finally:
