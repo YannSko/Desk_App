@@ -13,6 +13,8 @@ from data_process import convert_columns,  infer_data_type, infer_data_types
 #create_tables_from_json()
 
 ######### pour créer les tables et insérer direct
+
+df_to_sql_j()
 #df_to_sql_cxe()## Commodities-Oil-Tout json simple
 #df_to_sql_big() ## Json avec header > data ( headers -rows)
 #insert_data_from_json()

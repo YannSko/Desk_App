@@ -71,23 +71,34 @@ def infer_data_type(series):
 def convert_columns(df, inferred_types):
     for col, dtype in inferred_types.items():
         if dtype == 'datetime.date':
-            df[col] = df[col].astype(str)
-            df[col] = df[col].replace('None', np.nan)
-            df[col] = df[col].str.replace('-', '')
-            df[col] = pd.to_datetime(df[col]).dt.date
+            try:
+                df[col] = df[col].astype(str)
+                df[col] = df[col].replace('None', np.nan)
+                df[col] = df[col].str.replace('-', '')
+                df[col] = pd.to_datetime(df[col]).dt.date
+            except Exception as e:
+                print(f"Error converting column '{col}' to date", e)
+                df[col]= df[col].astype(str)
         elif dtype == 'int64':
+            try:
             # Apply cleaning operations similar to infer_data_type function
-            df[col] = df[col].astype(str)
-            df[col] = df[col].replace('None', np.nan)
-            df[col] = df[col].str.replace('-', '')
-            df[col] = pd.to_numeric(df[col]).fillna(0).astype(int)   
+                df[col] = df[col].astype(str)
+                df[col] = df[col].replace('None', np.nan)
+                df[col] = df[col].str.replace('-', '')
+                df[col] = pd.to_numeric(df[col]).fillna(0).astype(int)  
+            except Exception as e:
+                print(f"Error converting column '{col}' to int", e)
+                df[col]= df[col].astype(str) 
         elif dtype == 'float64':
-            df[col] = df[col].astype(str)
-            df[col] = df[col].replace('None', np.nan)
-            df[col] = df[col].str.replace('-', '')
-            df[col] = df[col].str.replace('.', '').str.replace('-', '').str.replace(',', '').str.replace('%', '').str.replace('$','')
-            df[col] = pd.to_numeric(df[col]).fillna(0).astype(float)
-        
+            try:
+                df[col] = df[col].astype(str)
+                df[col] = df[col].replace('None', np.nan)
+                df[col] = df[col].str.replace('-', '')
+                df[col] = df[col].str.replace('.', '').str.replace('-', '').str.replace(',', '').str.replace('%', '').str.replace('$','')
+                df[col] = pd.to_numeric(df[col]).fillna(0).astype(float)
+            except Exception as e:
+                print(f"Error converting column '{col}' to int", e)
+                df[col]= df[col].astype(str) 
         elif dtype == 'object':
             df[col] = df[col].astype(str)
         # Add more conditions for other data types if needed

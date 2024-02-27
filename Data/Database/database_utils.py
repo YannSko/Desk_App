@@ -11,28 +11,33 @@ import openpyxl
 import xml.etree.ElementTree as ET
 from tkinter import Tk, filedialog
 import psycopg2
-hostname = 'localhost'
-database = 'First_test'
-username = 'postgres'
-pwd = 'Yann'
-port_id = 5432
+import os
+
+from database_decorators import log_and_backup
+
+
+HOSTNAME='localhost'
+DATABASE='First_test'
+username='postgres'
+PWD='Yann'
+PORT_ID=5432
+
 
 def connect_to_database():
     try:
         conn = psycopg2.connect(
-            host=hostname,
-            dbname=database,
+            host=HOSTNAME,
+            dbname=DATABASE,
             user=username,
-            password=pwd,
-            port=port_id
+            password=PWD,
+            port=PORT_ID
         )
         return conn
     except Exception as error:
         print(error)
         return None
 
-
-
+@log_and_backup
 def df_to_sql_j():
     conn = connect_to_database()
     root = Tk()
@@ -85,13 +90,24 @@ def df_to_sql_j():
                 insert_query = f"INSERT INTO {table_name} VALUES ({', '.join(['%s'] * len(df.columns))})"
                 cur.execute(insert_query, row)
 
-        conn.commit()
-        print(f"DataFrame from {json_file_path} successfully saved to table {table_name} in the database.")
+        # Prompt user for commit
+        user_choice = input("Voulez-vous sauvegarder les données dans la base de données ? (y/n): ")
+        if user_choice.lower() == 'y':
+            conn.commit()
+            print(f"DataFrame from {json_file_path} successfully saved to table {table_name} in the database.")
+        elif user_choice.lower() == 'n':
+            print("Transaction annulée à la demande de l'utilisateur.")
+            conn.rollback()
+        else:
+            print("Choix invalide. La transaction sera conservée.")
+            conn.rollback()
+
     except Exception as e:
         print("Error:", e)
     finally:
         if conn:
             conn.close()
+
 
 #################DF_sql big
 
@@ -227,6 +243,7 @@ def df_to_sql_cxe():
     
 
 # Créer une table à partir d'un fichier JSON
+
 def create_table():
     conn = connect_to_database()
     if conn:
@@ -294,6 +311,7 @@ def create_table():
             conn.close()
 
 # Vérifier et supprimer les colonnes vides de la table
+
 def check_and_drop(table_name):
     conn = connect_to_database()
     if conn:
@@ -320,7 +338,7 @@ def check_and_drop(table_name):
 # Fonction pour insérer des données depuis un JSON
 # Fonction pour insérer des données depuis un JSON
 
-import re
+
 def insert_forex_data_json():
     conn = connect_to_database()
     if conn:
@@ -398,7 +416,7 @@ def insert_forex_data_json():
             conn.close()
 
 ################################################ CRYPTO####################################################
-            
+          
 def insert_crypto_data_json():
     conn = connect_to_database()
     if conn:
@@ -561,6 +579,7 @@ def insert_data_json():
 # Fonction pour créer la table
 # Fonction pour créer la table à partir du JSON
 # Fonction pour lire les données JSON à partir d'un fichier
+
 def read_json_file(file_path):
     try:
         with open(file_path, 'r') as file:
@@ -677,6 +696,7 @@ def create_tables_from_json():
 
 
 # Fonction pour insérer les données depuis le JSON
+
 def insert_data_from_json():
     table_name = input("Enter the table name: ")
     file_path = input("Enter the JSON file path: ")
@@ -736,6 +756,7 @@ def get_data(limit=None):
             print(error)
         finally:
             conn.close()
+
 def get_data_x():
     table_name = input("Enter the table name: ")
     while not isinstance(table_name, str):
