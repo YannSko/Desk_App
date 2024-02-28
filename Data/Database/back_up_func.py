@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import psycopg2
 
+
 def make_backup_and_export_data(nom_base_donnees, dossier_sortie, host_src, port_src, user_src, password_src,
                                 host_dest, port_dest, db_name_dest, user_dest, password_dest):
     # Delete all files in the backup directory
