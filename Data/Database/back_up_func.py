@@ -2,24 +2,25 @@ import os
 import pandas as pd
 import psycopg2
 
-def exporter_donnees_csv(nom_base_donnees, dossier_sortie, host, port, user, password):
+def make_backup_and_export_data(nom_base_donnees, dossier_sortie, host_src, port_src, user_src, password_src,
+                                host_dest, port_dest, db_name_dest, user_dest, password_dest):
+    # Delete all files in the backup directory
+    for file in os.listdir(dossier_sortie):
+        os.remove(os.path.join(dossier_sortie, file))
+
     # Connexion à la base de données source
-    conn = psycopg2.connect(
+    conn_src = psycopg2.connect(
         dbname=nom_base_donnees,
-        user=user,
-        password=password,
-        host=host,
-        port=port
+        user=user_src,
+        password=password_src,
+        host=host_src,
+        port=port_src
     )
-    cursor = conn.cursor()
+    cursor_src = conn_src.cursor()
 
     # Récupération des noms de toutes les tables de la base de données source
-    cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-    tables = cursor.fetchall()
-
-    # Création du dossier de sortie s'il n'existe pas
-    if not os.path.exists(dossier_sortie):
-        os.makedirs(dossier_sortie)
+    cursor_src.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+    tables = cursor_src.fetchall()
 
     # Exporter chaque table dans un fichier CSV séparé
     for table in tables:
@@ -27,8 +28,8 @@ def exporter_donnees_csv(nom_base_donnees, dossier_sortie, host, port, user, pas
         nom_fichier_sortie = os.path.join(dossier_sortie, f"{nom_table}.csv")
 
         # Exécution de la requête pour récupérer toutes les données de la table
-        cursor.execute(f"SELECT * FROM {nom_table}")
-        rows = cursor.fetchall()
+        cursor_src.execute(f"SELECT * FROM {nom_table}")
+        rows = cursor_src.fetchall()
 
         # Création du DataFrame à partir des données
         df = pd.DataFrame(rows)
@@ -37,27 +38,34 @@ def exporter_donnees_csv(nom_base_donnees, dossier_sortie, host, port, user, pas
         df.to_csv(nom_fichier_sortie, index=False, header=False)
 
     # Fermeture de la connexion à la base de données source
-    cursor.close()
-    conn.close()
+    cursor_src.close()
+    conn_src.close()
 
-def importer_donnees_csv(directory, host, port, db_name, user, password):
     # Connexion à la base de données cible
-    conn = psycopg2.connect(
-        dbname=db_name,
-        user=user,
-        password=password,
-        host=host,
-        port=port
+    conn_dest = psycopg2.connect(
+        dbname=db_name_dest,
+        user=user_dest,
+        password=password_dest,
+        host=host_dest,
+        port=port_dest
     )
 
     # Création du curseur
-    cursor = conn.cursor()
+    cursor_dest = conn_dest.cursor()
+
+    # Suppression de toutes les tables dans la base de données cible
+    cursor_dest.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+    tables_dest = cursor_dest.fetchall()
+    for table_dest in tables_dest:
+        nom_table_dest = table_dest[0]
+        drop_table_query = f"DROP TABLE IF EXISTS {nom_table_dest} CASCADE"
+        cursor_dest.execute(drop_table_query)
 
     # Parcourir le répertoire contenant les fichiers CSV
-    for filename in os.listdir(directory):
+    for filename in os.listdir(dossier_sortie):
         if filename.endswith(".csv"):
             table_name = os.path.splitext(filename)[0]
-            filepath = os.path.join(directory, filename)
+            filepath = os.path.join(dossier_sortie, filename)
 
             # Lecture du fichier CSV dans un DataFrame
             df = pd.read_csv(filepath, header=None)
@@ -65,21 +73,21 @@ def importer_donnees_csv(directory, host, port, db_name, user, password):
             # Création de la table dans la base de données cible
             cols = ",".join([f"col{i+1} TEXT" for i in range(len(df.columns))])
             create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({cols})"
-            cursor.execute(create_table_query)
+            cursor_dest.execute(create_table_query)
 
             # Construction de la requête d'insertion
             placeholders = ",".join(["%s"] * len(df.columns))
             insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
 
             # Insertion des données dans la base de données cible
-            cursor.executemany(insert_query, df.values.tolist())
-            conn.commit()
+            cursor_dest.executemany(insert_query, df.values.tolist())
+            conn_dest.commit()
 
             print(f"Données importées avec succès depuis le fichier '{filename}' dans la table '{table_name}'")
 
     # Fermeture de la connexion à la base de données cible
-    cursor.close()
-    conn.close()
+    cursor_dest.close()
+    conn_dest.close()
 
 # Informations de connexion pour la base de données source
 HOST_SRC = 'localhost'
@@ -96,22 +104,17 @@ USER_DEST = 'postgres'
 PASSWORD_DEST = 'Yann'
 DATABASE_DEST = 'back_up'
 
-# Exporter les données depuis la base de données source vers des fichiers CSV
-exporter_donnees_csv(
+# Exporter les données depuis la base de données source vers des fichiers CSV et les importer dans la base de données cible
+make_backup_and_export_data(
     nom_base_donnees=DATABASE_SRC,
     dossier_sortie=BACKUP_DIR_SRC,
-    host=HOST_SRC,
-    port=PORT_SRC,
-    user=USER_SRC,
-    password=PASSWORD_SRC
-)
-
-# Importer les données depuis les fichiers CSV dans la base de données cible
-importer_donnees_csv(
-    directory=BACKUP_DIR_SRC,
-    host=HOST_DEST,
-    port=PORT_DEST,
-    db_name=DATABASE_DEST,
-    user=USER_DEST,
-    password=PASSWORD_DEST
+    host_src=HOST_SRC,
+    port_src=PORT_SRC,
+    user_src=USER_SRC,
+    password_src=PASSWORD_SRC,
+    host_dest=HOST_DEST,
+    port_dest=PORT_DEST,
+    db_name_dest=DATABASE_DEST,
+    user_dest=USER_DEST,
+    password_dest=PASSWORD_DEST
 )
