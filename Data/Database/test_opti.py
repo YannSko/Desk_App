@@ -6,7 +6,8 @@ import multiprocessing
 import queue
 from functools import partial
 
-from utils.concurrency.threading import Threder
+from utils.concurrency.threading import threder
+
 
 
 
@@ -39,6 +40,17 @@ def create_tables_to_csv(conn_src, dossier_sortie, queue):
 
     cursor_src.close()
 
+def delete_all_tables(cursor):
+    # Retrieve all table names from the current schema
+    cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")
+
+    # Fetch all table names
+    tables = cursor.fetchall()
+
+    # Iterate through each table and drop it
+    for table in tables:
+        cursor.execute(f"DROP TABLE IF EXISTS {table[0]}")
+
 def import_csv_to_backup_db(filepath, queue):
     # Créez une nouvelle connexion dans chaque processus enfant
     conn_dest = psycopg2.connect(
@@ -51,6 +63,9 @@ def import_csv_to_backup_db(filepath, queue):
     cursor_dest = conn_dest.cursor()
 
     try:
+        delete_all_tables(cursor_dest)
+
+        print("all old table deleted")
         df = pd.read_csv(filepath, header=None)
 
         # Get the number of columns in the CSV file
@@ -91,10 +106,10 @@ def run_backup_process(conn_src, BACKUP_DIR_SRC, conn_dest, q):
     import_func = partial(import_csv_to_backup_db, queue=q)
 
     # Create Threder instance
-    threder = Threder()
+    Threder = threder()
 
     # Run import_csv_to_backup_db function in parallel using Threder
-    threder.run_in_parallel([partial(import_func, filepath) for filepath in csv_files])
+    Threder.run_in_parallel([partial(import_func, filepath) for filepath in csv_files])
 
 # Informations de connexion pour la base de données source
 HOST_SRC = 'localhost'
