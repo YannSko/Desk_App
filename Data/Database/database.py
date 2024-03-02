@@ -3,7 +3,7 @@ from database_utils import *
 import time
 from data_process import convert_columns,  infer_data_type, infer_data_types
 
-df_to_sql_j()
+#df_to_sql_j()
 
 #update_data()
 #update_data()
@@ -16,7 +16,7 @@ df_to_sql_j()
 ######### pour créer les tables et insérer direct
 
 
-#df_to_sql_cxe()## Commodities-Oil-Tout json simple
+df_to_sql_cxe()## Commodities-Oil-Tout json simple
 #df_to_sql_big() ## Json avec header > data ( headers -rows)
 #insert_data_from_json()
 #create_table()#create pour toutes les structs en gé

@@ -6,15 +6,16 @@ import re
 import json
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import pandas as pd
-from tkinter import Tk
-from tkinter import filedialog
+import tkinter as tk
+from tkinter import filedialog, messagebox, simpledialog
+
 import csv
 import openpyxl
 import xml.etree.ElementTree as ET
-from tkinter import Tk, filedialog
+
 import psycopg2
 import os
-
+from tkinter import simpledialog
 #from database_decorators import  backup
 import logging
 
@@ -49,75 +50,55 @@ def connect_to_database():
 
 
 def df_to_sql_j():
-    conn = connect_to_database()
-    root = Tk()
-    root.withdraw()  # Masquer la fenêtre principale
-    json_file_path = filedialog.askopenfilename(initialdir="C:/Users/YourUsername/Desktop", title="Select JSON file", filetypes=(("JSON files", "*.json"), ("All files", "*.*")))
-    table_name = input("Enter the table name: ")
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+
+    json_file_path = filedialog.askopenfilename(initialdir="/", title="Select JSON file", filetypes=(("JSON files", "*.json"), ("All files", "*.*")))
+    if not json_file_path:
+        messagebox.showerror("Error", "No file selected.")
+        return
+
+    table_name = simpledialog.askstring("Input", "Enter the table name for the data:", parent=root)
+    if not table_name:
+        messagebox.showerror("Error", "No table name provided.")
+        return
+
     try:
-        # Read JSON file into a DataFrame
+        conn = connect_to_database()
         with open(json_file_path, 'r') as file:
             data = json.load(file)
-            df = pd.DataFrame.from_dict(data)
-
-        # Add 'id' column with sequential values
+        df = pd.DataFrame.from_dict(data)
         df.insert(0, 'id', range(1, 1 + len(df)))
 
-        # Function to flatten nested dictionaries
         def flatten_dict(d):
-            flat_dict = {}
-            for key, value in d.items():
-                if isinstance(value, dict):
-                    flat_dict.update(flatten_dict(value))
-                else:
-                    flat_dict[key] = value
-            return flat_dict
+            return {k: flatten_dict(v) if isinstance(v, dict) else v for k, v in d.items()}
 
-        # Flatten nested dictionaries in DataFrame
         for col in df.columns:
             df[col] = df[col].apply(lambda x: flatten_dict(x) if isinstance(x, dict) else x)
 
-        # Split columns with nested dictionaries into separate columns
-        for col in df.columns:
-            if isinstance(df[col][0], dict):
-                expanded_df = df[col].apply(pd.Series)
-                expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
-                df = pd.concat([df, expanded_df], axis=1)
-                df.drop(columns=[col], inplace=True)
-
-        # Convert DataFrame to a list of tuples (each tuple represents a row)
-        data_list = [tuple(row) for row in df.to_numpy()]
-
-        # Create table if it does not exist
         with conn.cursor() as cur:
-            create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} VARCHAR' for col in df.columns])})"
+            columns = ", ".join([f"{col} VARCHAR" for col in df.columns])
+            create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns});"
             cur.execute(create_table_query)
 
-            # Insert data into the table
-            for row in data_list:
-                row = list(row)
-                row[-1] = str(row[-1])  # Convert last element (nested dict) to string
-                insert_query = f"INSERT INTO {table_name} VALUES ({', '.join(['%s'] * len(df.columns))})"
-                cur.execute(insert_query, row)
+            for _, row in df.iterrows():
+                placeholders = ', '.join(['%s'] * len(row))
+                insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                cur.execute(insert_query, tuple(row))
 
-        # Prompt user for commit
-        user_choice = input("Voulez-vous sauvegarder les données dans la base de données ? (y/n): ")
-        if user_choice.lower() == 'y':
+        user_choice = messagebox.askyesno("Confirm", "Do you want to save the data to the database?")
+        if user_choice:
             conn.commit()
-            print(f"DataFrame from {json_file_path} successfully saved to table {table_name} in the database.")
-        elif user_choice.lower() == 'n':
-            print("Transaction annulée à la demande de l'utilisateur.")
-            conn.rollback()
+            messagebox.showinfo("Success", "Data successfully saved to the database.")
         else:
-            print("Choix invalide. La transaction sera conservée.")
             conn.rollback()
+            messagebox.showinfo("Cancelled", "Transaction cancelled by the user.")
 
     except Exception as e:
-        print("Error:", e)
+        messagebox.showerror("Error", f"An error occurred: {e}")
     finally:
         if conn:
             conn.close()
-
 
 #################DF_sql big
 
@@ -151,39 +132,53 @@ def create_table_from_df(df, table_name, conn):
         print("Error:", e)
 
 def df_to_sql_big():
-    json_file_path = input("Enter the path to the JSON file: ")
-    table_name = input("Enter the table name: ")
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+
+    json_file_path = filedialog.askopenfilename(initialdir="/", title="Select JSON file", filetypes=(("JSON files", "*.json"), ("All files", "*.*")))
+    if not json_file_path:
+        messagebox.showerror("Error", "No file selected.")
+        return
+
+    table_name = simpledialog.askstring("Input", "Enter the table name for the data:", parent=root)
+    if not table_name:
+        messagebox.showerror("Error", "No table name provided.")
+        return
+
     try:
         conn = connect_to_database()
-        
-        # Charger les données JSON dans un DataFrame
         with open(json_file_path, 'r') as file:
             json_data = json.load(file)
         data = json_data['data']['rows']
         df = pd.DataFrame(data)
-        
-        # Créer la table si elle n'existe pas
+
+        # Create the table if it doesn't exist
         create_table_from_df(df, table_name, conn)
         
-        # Ajouter la colonne 'id' avec des valeurs séquentielles
+        # Add an 'id' column with sequential values
         df.insert(0, 'id', range(1, 1 + len(df)))
         
-        # Convertir le DataFrame en liste de tuples
+        # Convert the DataFrame into a list of tuples
         records = df.values.tolist()
 
-        # Créer une chaîne de requête d'insertion
-        placeholders = ", ".join(["%s"] * len(df.columns))
-        insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
-
-        # Exécuter la requête d'insertion pour chaque ligne dans le DataFrame
         with conn.cursor() as cur:
+            # Create an insertion query string
+            placeholders = ", ".join(["%s"] * len(df.columns))
+            insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
+            
+            # Execute the insertion query for each row in the DataFrame
             cur.executemany(insert_query, records)
         
-        # Valider la transaction
-        conn.commit()
-        print(f"DataFrame successfully saved to table {table_name} in the database.")
+        user_choice = messagebox.askyesno("Confirm", "Do you want to save the data to the database?")
+        if user_choice:
+            conn.commit()
+            messagebox.showinfo("Success", "Data successfully saved to the database.")
+        else:
+            conn.rollback()
+            messagebox.showinfo("Cancelled", "Transaction cancelled by the user.")
+
     except Exception as e:
-        print("Error:", e)
+        messagebox.showerror("Error", f"An error occurred: {e}")
     finally:
         if conn:
             conn.close()
@@ -198,60 +193,151 @@ def sanitize_column_name(name):
     return sanitized_name
 
 def df_to_sql_cxe():
-    conn = connect_to_database()
-    root = Tk()
+    root = tk.Tk()
     root.withdraw()  # Hide the main window
-    file_path = filedialog.askopenfilename(initialdir="C:/Users/YourUsername/Desktop", title="Select file",
-                                           filetypes=(("CSV files", "*.csv"), ("XML files", "*.xml"), ("Excel files", "*.xlsx")))
-    table_name = input("Enter the table name: ")
+
+    file_path = filedialog.askopenfilename(
+        initialdir="/",
+        title="Select file",
+        filetypes=(("CSV files", "*.csv"), ("XML files", "*.xml"), ("Excel files", "*.xlsx"))
+    )
+    if not file_path:
+        messagebox.showerror("Error", "No file selected.")
+        return
+
+    table_name = simpledialog.askstring("Input", "Enter the table name for the data:", parent=root)
+    if not table_name:
+        messagebox.showerror("Error", "No table name provided.")
+        return
+
     try:
+        conn = connect_to_database()
+
         if file_path.endswith('.csv'):
             df = pd.read_csv(file_path)
         elif file_path.endswith('.xml'):
             tree = ET.parse(file_path)
             root = tree.getroot()
-            data = []
-            for elem in root:
-                data.append(elem.attrib)
+            data = [elem.attrib for elem in root]
             df = pd.DataFrame(data)
-        elif file_path.endswith('.xlsx'):  # Add handling for Excel files
+        elif file_path.endswith('.xlsx'):
             df = pd.read_excel(file_path)
         else:
-            print("Unsupported file format.")
+            messagebox.showerror("Error", "Unsupported file format.")
             return
 
-        # Add 'id' column with sequential values
-        df.insert(0, 'id', range(1, 1 + len(df)))
+        
 
         # Sanitize column names to comply with SQL naming conventions
         df.columns = [sanitize_column_name(col) for col in df.columns]
 
-        # Convert DataFrame to a list of tuples (each tuple represents a row)
-        data_list = [tuple(row) for row in df.to_numpy()]
+        # Prepare data for insertion
+        data_list = df.to_dict('records')
 
-        # Create table if it does not exist
+        # Create table if it does not exist and insert data
         with conn.cursor() as cur:
-            # Handle column names with special characters or spaces
-            create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} VARCHAR' for col in df.columns])})"
+            # Define SQL for creating table based on df columns
+            column_definitions = ", ".join([f"{col} TEXT" for col in df.columns])
+            create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} (id SERIAL PRIMARY KEY, {column_definitions})"
             cur.execute(create_table_query)
 
-            # Insert data into the table
-            for row in data_list:
-                row = list(row)
-                row[-1] = str(row[-1])  # Convert last element (nested dict) to string
-                # Handle column names with special characters or spaces
-                insert_query = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in df.columns])}) VALUES ({', '.join(['%s'] * len(df.columns))})"
-                cur.execute(insert_query, row)
+            # Define SQL for inserting data
+            column_names = ", ".join(df.columns)
+            placeholders = ", ".join(["%s"] * len(df.columns))
+            insert_query = f"INSERT INTO {table_name} ({column_names}) VALUES ({placeholders})"
 
-        conn.commit()
-        print(f"DataFrame from {file_path} successfully saved to table {table_name} in the database.")
+            for record in data_list:
+                cur.execute(insert_query, list(record.values()))
+
+        user_choice = messagebox.askyesno("Confirm", "Do you want to save the data to the database?")
+        if user_choice:
+            conn.commit()
+            messagebox.showinfo("Success", "Data successfully saved to the database.")
+        else:
+            conn.rollback()
+            messagebox.showinfo("Cancelled", "Transaction cancelled by the user.")
+
     except Exception as e:
-        print("Error:", e)
+        messagebox.showerror("Error", f"An error occurred: {e}")
     finally:
         if conn:
             conn.close()
-    
+########################################test 123
+            
 
+
+def create_table_if_not_exists(conn, table_name, df):
+    with conn.cursor() as cur:
+        # Créer une commande SQL pour vérifier l'existence de la table
+        cur.execute("SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = %s);", (table_name,))
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            # Créer une commande SQL pour créer la table si elle n'existe pas
+            column_definitions = ", ".join([f"{sanitize_column_name(col)} TEXT" for col in df.columns if col != 'id'])
+            create_table_query = f"CREATE TABLE {table_name} (id SERIAL PRIMARY KEY, {column_definitions});"
+            cur.execute(create_table_query)
+            print(f"Table {table_name} created successfully.")
+
+def handle_json_data():
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+
+    json_file_path = filedialog.askopenfilename(
+        initialdir="/",
+        title="Select JSON file",
+        filetypes=(("JSON files", "*.json"), ("All files", "*.*"))
+    )
+    if not json_file_path:
+        messagebox.showerror("Error", "No file selected.")
+        return
+
+    table_name = simpledialog.askstring("Input", "Enter the table name for the data:", parent=root)
+    if not table_name:
+        messagebox.showerror("Error", "No table name provided.")
+        return
+
+    try:
+        conn = connect_to_database()
+        if conn is None:
+            messagebox.showerror("Error", "Failed to connect to the database.")
+            return
+
+        with open(json_file_path, 'r') as file:
+            json_data = json.load(file)
+
+        # Convert JSON data to DataFrame (simple example, adapt as needed)
+        df = pd.json_normalize(json_data)  # Cette fonction peut varier selon la structure de votre JSON
+        
+        
+        
+        # Sanitize column names to comply with SQL naming conventions
+        df.columns = [sanitize_column_name(col) for col in df.columns]
+
+        # Vérifier si la table n'existe pas et la créer
+        create_table_if_not_exists(conn, table_name, df)
+
+        # Insert data into the database
+        with conn.cursor() as cur:
+            column_names = ", ".join(df.columns)
+            placeholders = ", ".join(["%s"] * len(df.columns))
+            insert_query = f"INSERT INTO {table_name} ({column_names}) VALUES ({placeholders})"
+            for index, row in df.iterrows():
+                cur.execute(insert_query, tuple(row.values))
+
+        user_choice = messagebox.askyesno("Confirm", "Do you want to save the data to the database?")
+        if user_choice:
+            conn.commit()
+            messagebox.showinfo("Success", "Data successfully saved to the database.")
+        else:
+            conn.rollback()
+            messagebox.showinfo("Cancelled", "Transaction cancelled by the user.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+    finally:
+        if conn:
+            conn.close()
 # Créer une table à partir d'un fichier JSON
 
 def create_table():
@@ -965,6 +1051,7 @@ def update_data():
 
 
 def delete_data():
+    
     print("Options disponibles :")
     print("1. Supprimer une ou plusieurs tables spécifiques.")
     print("2. Supprimer une ou plusieurs colonnes spécifiques d'une table.")
