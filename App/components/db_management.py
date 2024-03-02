@@ -40,6 +40,9 @@ class DBManagement(ctk.CTkFrame):
         self.btn_create_table = ctk.CTkButton(self, text="Delete Table", command=self.delete_data)
         self.btn_create_table.pack(pady=10)
 
+        self.btn_export_data = ctk.CTkButton(self, text="Export Data", command=self.export_data_ui)
+        self.btn_export_data.pack(pady=10)
+
         # Status label
         self.label_status = ctk.CTkLabel(self, text="Status: Not connected")
         self.label_status.pack(pady=10)
@@ -268,7 +271,59 @@ class DBManagement(ctk.CTkFrame):
             finally:
                 conn.close()
 
+    ####export csv
+                
+     # Method for exporting data UI interaction
+    def export_data_ui(self):
+    # Fetch and display available tables
+        conn = connect_to_database()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+                    tables = [row[0] for row in cur.fetchall()]
+                    if not tables:
+                        messagebox.showinfo("Info", "No tables found in the database.")
+                        return
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+                return
+            finally:
+                conn.close()
 
+            # Create a dropdown menu to select the table
+            table_name_dropdown = ctk.CTkOptionMenu(self, values=tables)
+            table_name_dropdown.pack(pady=20)
+            
+            # Create an export button
+            export_button = ctk.CTkButton(self, text="Export Selected Table", command=lambda: self.on_table_select(table_name_dropdown.get()))
+            export_button.pack(pady=10)
+
+    def on_table_select(self, selected_table):
+        if selected_table:
+            self.export_data(selected_table)
+
+    # Method to perform the export operation
+    def export_data(self, table_name):
+        # Get the file location for saving the CSV file
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not file_path:  # If no file is selected, return early
+            messagebox.showinfo("Export Data", "Export cancelled.")
+            return
+
+        conn = connect_to_database()
+        if conn:
+            try:
+                # Build the query string using psycopg2.sql
+                query = SQL("SELECT * FROM {}").format(Identifier(table_name)).as_string(conn)
+                # Use the query string with pandas.read_sql
+                df = pd.read_sql(query, conn)
+                df.to_csv(file_path, index=False)
+                messagebox.showinfo("Export Data", f"Data from table '{table_name}' has been exported successfully to {file_path}.")
+            except Exception as e:
+                messagebox.showerror("Export Data", f"Failed to export data: {e}")
+            finally:
+                conn.close()
 
 
 
