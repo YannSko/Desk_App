@@ -13,7 +13,12 @@ from tkinter import Tk, filedialog
 import psycopg2
 import os
 
-from database_decorators import log_and_backup
+#from database_decorators import  backup
+import logging
+
+
+from utils.Logs.logger import logs
+
 
 
 HOSTNAME='localhost'
@@ -37,7 +42,7 @@ def connect_to_database():
         print(error)
         return None
 
-@log_and_backup
+@logs
 def df_to_sql_j():
     conn = connect_to_database()
     root = Tk()
