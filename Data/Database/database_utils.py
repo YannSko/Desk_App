@@ -1,3 +1,5 @@
+
+
 import psycopg2
 from psycopg2 import sql
 import re 
@@ -17,7 +19,10 @@ import os
 import logging
 
 
-from utils.Logs.logger import logs
+from log_deco import logs
+
+
+
 
 
 
@@ -42,7 +47,7 @@ def connect_to_database():
         print(error)
         return None
 
-@logs
+
 def df_to_sql_j():
     conn = connect_to_database()
     root = Tk()

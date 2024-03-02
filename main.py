@@ -1,12 +1,13 @@
-from utils.Logs.logger import logs
+from utils.Logs.log_deco.logger import logs
 from Data.Database.database_utils import *
+# Example usage
 
-@logs
+
+df_to_sql_j()
+
 def my_function(data):
-    print(f"Traitement des données: {data}")
+    print(f"Processing data: {data}")
 
-
-# Appeler la fonction
 if __name__ == "__main__":
-    my_function("données précises")
-    
+    my_function("precise data")
+    df_to_sql_j()
