@@ -147,8 +147,9 @@ class DBManagement(ctk.CTkFrame):
         # Display DataFrame as text
         text_to_display = df.to_string(index=False)
         self.text.insert(tk.END, text_to_display)
-
     
+
+    ##### delete
     def delete_data(self):
         options = ["Delete specific tables", "Delete specific columns from a table", "Delete specific rows from a table"]
         choice = simpledialog.askstring("Delete Data", "Choose option:\n1. " + "\n2. ".join(options))
