@@ -5,6 +5,8 @@ import psycopg2
 import queue
 from  Data.Database.test_opti import run_backup_process, restore_backup
 from tkinter import  messagebox
+import logging
+logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SettingsManager:
     def __init__(self, filepath="settings.json"):
@@ -20,8 +22,8 @@ class SettingsManager:
             return {
                 "font_size": 12, 
                 "color_theme": "blue", 
-                "appearance_mode": "System",  # Default appearance mode
-                "ui_scaling": "100%"  # Default UI scaling
+                "appearance_mode": "System",  
+                "ui_scaling": "100%"  
             }
 
     def save_settings(self, settings):
@@ -39,14 +41,14 @@ class SettingsManager:
 class Settings(ctk.CTkFrame):
     def __init__(self, parent, app):
         super().__init__(parent)
-        self.app = app  # Reference to the main app to call update method
+        self.app = app  
         self.settings_manager = SettingsManager()
         
         ctk.CTkLabel(self, text="Settings & Customization").pack(pady=20)
         
-        # Sidebar configuration omitted for brevity
         
-        # Additional UI elements for appearance mode and UI scaling
+        
+        # Additional UI elements appearance mode and UI scaling
         self.appearance_mode_label = ctk.CTkLabel(self, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.pack(padx=20, pady=(10, 0))
         self.appearance_mode_optionmenu = ctk.CTkOptionMenu(self, values=["Light", "Dark", "System"],
@@ -72,11 +74,13 @@ class Settings(ctk.CTkFrame):
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
         self.settings_manager.update_setting("appearance_mode", new_appearance_mode)
+        logging.info("change apparence")
 
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
         self.settings_manager.update_setting("ui_scaling", new_scaling)
+        logging.info("change UI")
 
     def apply_settings(self):
     # Load settings from the settings manager
@@ -141,14 +145,15 @@ class Settings(ctk.CTkFrame):
             port=PORT_DEST
         )
 
-        # Create a queue
+       
         q = queue.Queue()
         run_backup_process(conn_src, BACKUP_DIR_SRC, conn_dest, q)
         messagebox.showinfo("Backup", "Database backup completed successfully.")
+        logging.info("backup made")
 
     def restore_database(self):
         # Trigger the restore process
-        # Informations de connexion pour la base de données source
+       
         # Informations de connexion pour la base de données source
         HOST_SRC = 'localhost'
         PORT_SRC = 5432
@@ -182,8 +187,9 @@ class Settings(ctk.CTkFrame):
             port=PORT_DEST
         )
 
-        # Create a queue
+       
         q = queue.Queue()
         restore_backup(conn_src, BACKUP_DIR_SRC)  
         messagebox.showinfo("Restore", "Database restored successfully.")
+        logging.info("backup restored")
 

@@ -1,9 +1,10 @@
 import os
 import pandas as pd
 import psycopg2
+import queue
 import threading
 import multiprocessing
-import queue
+
 from functools import partial
 
 from utils.concurrency.threading import threder
