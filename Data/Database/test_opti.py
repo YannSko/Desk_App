@@ -157,3 +157,90 @@ while not q.empty():
 # Fermeture des connexions
 conn_src.close()
 conn_dest.close()
+
+
+
+################################# Restore part
+
+
+
+def restore_backup(conn_src, backup_dir_src):
+    """
+    Restores the backup from CSV files into the main database.
+    
+    :param conn_src: Connection to the source (main) database.
+    :param backup_dir_src: Directory where backup CSV files are stored.
+    :param conn_dest: Connection to the destination (backup) database. Not used in this function but kept for consistency.
+    """
+    q = queue.Queue()
+
+    # Step 1: Clear the main database
+    clear_main_database(conn_src, q)
+
+    # Step 2: Import CSV files from the backup directory into the main database
+    import_csv_to_main_db(conn_src, backup_dir_src, q)
+
+    # Print messages from the queue
+    while not q.empty():
+        print(q.get())
+
+def clear_main_database(conn, q):
+    """
+    Clears all tables from the main database.
+    
+    :param conn: Connection to the database.
+    :param q: Queue to put messages.
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        tables = cursor.fetchall()
+        for table in tables:
+            cursor.execute(f"DROP TABLE IF EXISTS {table[0]} CASCADE")
+            q.put(f"Dropped table {table[0]}")
+        conn.commit()
+    except Exception as e:
+        q.put(f"Error clearing main database: {e}")
+    finally:
+        cursor.close()
+
+def import_csv_to_main_db(conn, backup_dir, q):
+    """
+    Imports CSV files from the backup directory into the main database.
+    
+    :param conn: Connection to the database.
+    :param backup_dir: Directory where backup CSV files are stored.
+    :param q: Queue to put messages.
+    """
+    for file in os.listdir(backup_dir):
+        if file.endswith('.csv'):
+            filepath = os.path.join(backup_dir, file)
+            table_name = os.path.splitext(file)[0]
+            df = pd.read_csv(filepath, header=None)
+            cursor = conn.cursor()
+
+            # Create table with dynamic columns
+            num_columns = len(df.columns)
+            columns_sql = ", ".join([f"col{i+1} TEXT" for i in range(num_columns)])
+            cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql})")
+
+            # Insert data
+            placeholders = ", ".join(["%s"] * num_columns)
+            insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+            cursor.executemany(insert_sql, df.values.tolist())
+            conn.commit()
+
+            q.put(f"Restored table {table_name} from {file}")
+            cursor.close()
+
+# Example usage
+# Connexion à la base de données source
+conn_src = psycopg2.connect(
+    dbname=DATABASE_SRC,
+    user=USER_SRC,
+    password=PASSWORD_SRC,
+    host=HOST_SRC,
+    port=PORT_SRC
+)
+BACKUP_DIR_SRC = r'C:\Users\yskon\Desktop\Desk_App\Data\Database\back_up'
+restore_backup(conn_src, BACKUP_DIR_SRC)  

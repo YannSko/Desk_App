@@ -7,6 +7,7 @@ import psycopg2
 from psycopg2.sql import SQL, Identifier
 from psycopg2 import sql
 
+
 class DBManagement(ctk.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -150,6 +151,7 @@ class DBManagement(ctk.CTkFrame):
     
 
     ##### delete
+    
     def delete_data(self):
         options = ["Delete specific tables", "Delete specific columns from a table", "Delete specific rows from a table"]
         choice = simpledialog.askstring("Delete Data", "Choose option:\n1. " + "\n2. ".join(options))

@@ -6,6 +6,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from psycopg2.sql import SQL, Identifier
 from Data.Database.database_utils import *
 from Data.Database.data_process import infer_data_types, convert_columns
+from tkinter import simpledialog
 
 class DataVisualization(ctk.CTkFrame):
     
@@ -13,27 +14,44 @@ class DataVisualization(ctk.CTkFrame):
         super().__init__(parent)
         self.pack(fill="both", expand=True)
 
+        # Create a frame for the controls on the left
+        self.controls_frame = ctk.CTkFrame(self)
+        self.controls_frame.pack(side="left", fill="y")
+
+        # Create a frame for the canvas on the right
+        self.canvas_frame = ctk.CTkFrame(self)
+        self.canvas_frame.pack(side="right", fill="both", expand=True)
+        
+        self.limit_entry = ctk.CTkEntry(self.controls_frame, placeholder_text="Enter limit (e.g., 100)")
+        self.limit_entry.pack(pady=5)
+
+        self.limit_direction = ctk.CTkOptionMenu(self.controls_frame, values=["Top", "Bottom"], command=None)
+        self.limit_direction.pack(pady=5)
+
+        self.aggregation_dropdown = ctk.CTkOptionMenu(self.controls_frame, values=["None", "Mean", "Median"], command=None)
+        self.aggregation_dropdown.pack(pady=5)
+
         # Dropdown to select table from database
-        self.table_dropdown = ctk.CTkOptionMenu(self, values=[], command=self.on_table_select)
+        self.table_dropdown = ctk.CTkOptionMenu(self.controls_frame, values=[], command=self.on_table_select)
         self.table_dropdown.pack(pady=20)
         
         # Dropdowns to select X and Y axes
-        self.axis_x_dropdown = ctk.CTkOptionMenu(self, values=[])
-        self.axis_y_dropdown = ctk.CTkOptionMenu(self, values=[])
-        self.axis_x_dropdown.pack(pady=10)
-        self.axis_y_dropdown.pack(pady=10)
+        self.axis_x_dropdown = ctk.CTkOptionMenu(self.controls_frame, values=[])
+        self.axis_y_dropdown = ctk.CTkOptionMenu(self.controls_frame, values=[])
+        self.axis_x_dropdown.pack(pady=5)
+        self.axis_y_dropdown.pack(pady=5)
 
         # Dropdown to select plot type
-        self.plot_type_dropdown = ctk.CTkOptionMenu(self, values=["Line", "Scatter", "Bar"])
-        self.plot_type_dropdown.pack(pady=10)
+        self.plot_type_dropdown = ctk.CTkOptionMenu(self.controls_frame, values=["Line", "Scatter", "Bar"])
+        self.plot_type_dropdown.pack(pady=5)
 
         # Button to load data from database and plot
-        self.load_data_button = ctk.CTkButton(self, text="Load Data and Plot", command=self.load_data_and_plot)
-        self.load_data_button.pack(pady=10)
+        self.load_data_button = ctk.CTkButton(self.controls_frame, text="Load Data and Plot", command=self.load_data_and_plot)
+        self.load_data_button.pack(pady=5)
 
         # Canvas for matplotlib graph
         self.fig, self.ax = plt.subplots()
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.canvas_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.pack(fill="both", expand=True)
 
@@ -100,6 +118,25 @@ class DataVisualization(ctk.CTkFrame):
             return
 
         if self.df is not None and not self.df.empty:
+            limit = self.limit_entry.get()
+            if limit:
+                try:
+                    limit = int(limit)
+                    if self.limit_direction.get() == "Top":
+                        self.df = self.df.head(limit)
+                    elif self.limit_direction.get() == "Bottom":
+                        self.df = self.df.tail(limit)
+                except ValueError:
+                    messagebox.showerror("Error", "Limit must be an integer")
+                    return
+            
+            aggregation_method = self.aggregation_dropdown.get()
+            if aggregation_method in ["Mean", "Median"]:
+                if aggregation_method == "Mean":
+                    self.df[y_col] = self.df[y_col].mean()
+                elif aggregation_method == "Median":
+                    self.df[y_col] = self.df[y_col].median()
+            
             self.plot_data(x_col, y_col, plot_type)
         else:
             messagebox.showinfo("Info", "No data loaded.")
@@ -113,10 +150,12 @@ class DataVisualization(ctk.CTkFrame):
             self.ax.scatter(self.df[x_col], self.df[y_col])
         elif plot_type == "Bar":
             self.ax.bar(self.df[x_col], self.df[y_col])
+            plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
         self.ax.set_xlabel(x_col)
         self.ax.set_ylabel(y_col)
         self.ax.set_title(f"{plot_type} Plot: {y_col} vs {x_col}")
         self.canvas.draw()
+    
 
 # Ensure you replace 'connect_to_database' with your actual database connection function.

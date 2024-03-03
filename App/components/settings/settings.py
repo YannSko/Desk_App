@@ -1,6 +1,10 @@
 import customtkinter as ctk
 import json
 import os
+import psycopg2
+import queue
+from  Data.Database.test_opti import run_backup_process, restore_backup
+from tkinter import  messagebox
 
 class SettingsManager:
     def __init__(self, filepath="settings.json"):
@@ -55,6 +59,13 @@ class Settings(ctk.CTkFrame):
                                                     command=self.change_scaling_event)
         self.scaling_optionmenu.pack(padx=20, pady=(10, 20))
 
+        # Backup and Restore Buttons
+        self.backup_button = ctk.CTkButton(self, text="Backup", command=self.backup_database)
+        self.backup_button.pack(pady=10)
+        
+        self.restore_button = ctk.CTkButton(self, text="Restore", command=self.restore_database)
+        self.restore_button.pack(pady=10)
+
         # Load and apply existing settings
         self.load_and_apply_settings()
 
@@ -95,5 +106,84 @@ class Settings(ctk.CTkFrame):
         self.settings_manager.load_settings()
         # Apply settings
         self.apply_settings()
+    def backup_database(self):
+        # Trigger the backup process
+        # Informations de connexion pour la base de données source
+        HOST_SRC = 'localhost'
+        PORT_SRC = 5432
+        USER_SRC = 'postgres'
+        PASSWORD_SRC = 'Yann'
+        DATABASE_SRC = 'First_test'
+        BACKUP_DIR_SRC = r'C:\Users\yskon\Desktop\Desk_App\Data\Database\back_up'
 
-# Your application logic to apply these settings globally as needed
+        # Informations de connexion pour la base de données de sauvegarde
+        HOST_DEST = 'localhost'
+        PORT_DEST = 5432
+        USER_DEST = 'postgres'
+        PASSWORD_DEST = 'Yann'
+        DATABASE_DEST = 'back_up'
+
+        # Connexion à la base de données source
+        conn_src = psycopg2.connect(
+            dbname=DATABASE_SRC,
+            user=USER_SRC,
+            password=PASSWORD_SRC,
+            host=HOST_SRC,
+            port=PORT_SRC
+        )
+
+        # Connexion à la base de données de sauvegarde
+        conn_dest = psycopg2.connect(
+            dbname=DATABASE_DEST,
+            user=USER_DEST,
+            password=PASSWORD_DEST,
+            host=HOST_DEST,
+            port=PORT_DEST
+        )
+
+        # Create a queue
+        q = queue.Queue()
+        run_backup_process(conn_src, BACKUP_DIR_SRC, conn_dest, q)
+        messagebox.showinfo("Backup", "Database backup completed successfully.")
+
+    def restore_database(self):
+        # Trigger the restore process
+        # Informations de connexion pour la base de données source
+        # Informations de connexion pour la base de données source
+        HOST_SRC = 'localhost'
+        PORT_SRC = 5432
+        USER_SRC = 'postgres'
+        PASSWORD_SRC = 'Yann'
+        DATABASE_SRC = 'First_test'
+        BACKUP_DIR_SRC = r'C:\Users\yskon\Desktop\Desk_App\Data\Database\back_up'
+
+        # Informations de connexion pour la base de données de sauvegarde
+        HOST_DEST = 'localhost'
+        PORT_DEST = 5432
+        USER_DEST = 'postgres'
+        PASSWORD_DEST = 'Yann'
+        DATABASE_DEST = 'back_up'
+
+        # Connexion à la base de données source
+        conn_src = psycopg2.connect(
+            dbname=DATABASE_SRC,
+            user=USER_SRC,
+            password=PASSWORD_SRC,
+            host=HOST_SRC,
+            port=PORT_SRC
+        )
+
+        # Connexion à la base de données de sauvegarde
+        conn_dest = psycopg2.connect(
+            dbname=DATABASE_DEST,
+            user=USER_DEST,
+            password=PASSWORD_DEST,
+            host=HOST_DEST,
+            port=PORT_DEST
+        )
+
+        # Create a queue
+        q = queue.Queue()
+        restore_backup(conn_src, BACKUP_DIR_SRC)  
+        messagebox.showinfo("Restore", "Database restored successfully.")
+

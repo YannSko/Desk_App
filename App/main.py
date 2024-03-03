@@ -1,11 +1,13 @@
-import tkinter as tk
-from customtkinter import set_appearance_mode, set_default_color_theme, CTk, CTkFrame, CTkButton
+
+from customtkinter import set_appearance_mode, set_default_color_theme
 from components.file_select import FileSelection
 from components.data_viz import DataVisualization
 from components.export_tab import Export
 from components.db_management import DBManagement
 from App.components.settings.settings import Settings, SettingsManager
 import customtkinter
+
+
 set_appearance_mode("System")  # "light", "dark", or "system"
 set_default_color_theme("blue")  # blue, dark-blue, green
 
@@ -32,8 +34,9 @@ class App(customtkinter.CTk):
             "data_visualization": DataVisualization(self),
             "export": Export(self),
             "db_management": DBManagement(self),
-            "settings": Settings(self, app=self),  # Pass self to settings for callback
+            "settings": Settings(self, app=self),  
         }
+        
 
         for tab_name, tab_frame in self.tabs.items():
             button = customtkinter.CTkButton(self.tab_buttons_frame, text=tab_name.replace("_", " ").title(),
@@ -54,6 +57,9 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
+    
+    
+
 
 if __name__ == "__main__":
     app = App()
