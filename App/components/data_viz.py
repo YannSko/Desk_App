@@ -5,6 +5,7 @@ from tkinter import messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from psycopg2.sql import SQL, Identifier
 from Data.Database.database_utils import *
+from Data.Database.data_process import infer_data_types, convert_columns
 
 class DataVisualization(ctk.CTkFrame):
     
@@ -64,6 +65,9 @@ class DataVisualization(ctk.CTkFrame):
         selected_table = self.table_dropdown.get()
         self.df = self.get_data(selected_table)
         if self.df is not None:
+            # Infer data types and convert columns
+            inferred_types = infer_data_types(self.df)
+            self.df = convert_columns(self.df, inferred_types)
             columns = self.df.columns.tolist()
             self.update_dropdown(self.axis_x_dropdown, columns)
             self.update_dropdown(self.axis_y_dropdown, columns)
