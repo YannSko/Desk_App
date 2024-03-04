@@ -1,0 +1,150 @@
+1,0,Akita,28,80,120
+2,1,Anatolian Sheepdog,29,100,150
+3,2,Bernese Mountain Dog,27,85,110
+4,3,Bloodhound,26,80,120
+5,4,Borzoi,28,70,100
+6,5,Bullmastiff,27,100,130
+7,6,Great Dane,32,120,160
+8,7,Great Pyrenees,32,95,120
+9,8,Great Swiss Mountain Dog,28,130,150
+10,9,Irish Wolfhound,35,90,150
+11,10,Kuvasz,30,70,120
+12,11,Mastiff,30,175,190
+13,12,Neopolitan Mastiff,30,100,150
+14,13,Newfoundland,28,100,150
+15,14,Otter Hound,26,65,110
+16,15,Rottweiler,27,90,110
+17,16,Saint Bernard,28,110,190
+18,17,Afghan Hound,27,50,60
+19,18,Alaskan Malamute,na,na,na
+20,19,American Foxhound,25,65,70
+21,20,Beauceron,27,100,120
+22,21,Belgian Malinois,26,60,65
+23,22,Belgian Sheepdog,26,60,75
+24,23,Belgian Tervuren,26,60,75
+25,24,Black And Tan Coonhound,27,50,75
+26,25,Black Russian Terrier,29,80,140
+27,26,Bouvier Des Flandres,27,75,95
+28,27,Boxer,25,65,70
+29,28,Briard,27,74,76
+30,29,Chesapeake Bay Retriever,26,55,75
+31,30,Clumber Spaniel,20,35,65
+32,31,Collie (Rough) & (Smooth),26,50,75
+33,32,Curly Coated Retriever,27,65,80
+34,33,Doberman Pinscher,28,60,100
+35,34,English Foxhound,25,65,70
+36,35,English Setter,27,45,80
+37,36,German Shepherd Dog,26,75,90
+38,37,German Shorthaired Pointer,27,50,80
+39,38,German Wirehaired Pointer,26,60,70
+40,39,Giant Schnauzer,28,70,75
+41,40,Golden Retriever,24,55,75
+42,41,Gordon Setter,27,45,80
+43,42,Greyhound,30,60,70
+44,43,Irish Setter,27,60,70
+45,44,Komondor,35.5,80,135
+46,45,Labrador Retriever,24,55,80
+47,46,Old English Sheepdog (Bobtail),24,60,65
+48,47,Poodle Standard,25,45,45
+49,48,Rhodesian Ridgeback,27,70,85
+50,49,Scottish Deerhound,32,75,110
+51,50,Spinone Italiano,28,65,80
+52,51,Tibetan Mastiff,26,140,170
+53,52,Weimaraner,27,70,85
+54,53,Airdale Terrier,24,45,45
+55,54,American Staffordshire Terrier,19,40,50
+56,55,American Water Spaniel,18,25,45
+57,56,Australian Cattle Dog,20,35,45
+58,57,Australian Shepherd,23,40,60
+59,58,Basset Hound,14,40,50
+60,59,Bearded Collie,22,40,60
+61,60,Border Collie,21,40,40
+62,61,Brittany,21,30,40
+63,62,Bull Dog,16,50,60
+64,63,Bull Terrier,22,50,70
+65,64,Canaan Dog,24,35,55
+66,65,Chinese Shar Pei,20,45,55
+67,66,Chow Chow,22,45,55
+68,67,Cocker Spaniel-American,16,22,28
+69,68,Cocker Spaniel-English,17,25,35
+70,69,Dalmatian,23,45,70
+71,70,English Springer Spaniel,20,45,55
+72,71,Field Spaniel,18,35,50
+73,72,Flat Coated Retriever,23,60,70
+74,73,Finnish Spitz,20,31,35
+75,74,Harrier,21,40,60
+76,75,Ibizan Hound,29,42,55
+77,76,Irish Terrier,19,25,27
+78,77,Irish Water Spaniel,23,45,65
+79,78,Keeshond,19,35,50
+80,79,Kerry Blue Terrier,21,30,45
+81,80,Norwegian Elkhound,20,40,60
+82,81,Nova Scotia Duck Tolling Retriever,21,35,50
+83,82,Petit Basset Griffon Vendeen,15,30,40
+84,83,Pharaoh Hound,25,45,55
+85,84,Plott Hound,24,45,55
+86,85,Pointer,24,44,66
+87,86,Polish Lowland Sheepdog,20,30,35
+88,87,Portuguese Water Dog,23,42,60
+89,88,Redbone Coonhound,27,50,70
+90,89,Saluki,28,35,70
+91,90,Samoyed,24,50,65
+92,91,Siberian Husky,23,40,60
+93,92,Soft-Coated Wheaten Terrier,20,35,45
+94,93,Staffordshire Bull Terrier,16,24,28
+95,94,Standard Schnauzer,19,33,33
+96,95,Sussex Spaniel,16,40,45
+97,96,Vizsla,66,22,25
+98,97,Welsh Springer Spaniel,19,35,45
+99,98,Wirehaired Pointing Griffon,24,45,60
+100,99,American Eskimo,19,25,30
+101,100,Australian Terrier,10,10,14
+102,101,Basenji,17,20,22
+103,102,Beagle,16,18,30
+104,103,Bedlington Terrier,16,18,23
+105,104,Bichon Frise,11.5,10,18
+106,105,Border Terrier,15,12,15
+107,106,Boston Terrier,15,15,25
+108,107,Brussels Griffon,8,6,12
+109,108,Cairn Terrier,10,14,14
+110,109,Cardigan Welsh Corgi,12,25,35
+111,110,Cavalier King Charles Spaniel,15,15,20
+112,111,Coton de Tulear,not found,not found,not found
+113,112,Dachshund,10,16,32
+114,113,Dandie Dinmont Terrier,24,8,11
+115,114,English Toy Spaniel,10,9,15
+116,115,Fox Terrier ‰ÛÒ Smooth,16,15,20
+117,116,Fox Terrier ‰ÛÒ Wirehair,16,15,20
+118,117,French Bulldog,12,17,28
+119,118,German Pinscher,19,25,35
+120,119,Glen Imaal Terrier,14,34,36
+121,120,Lakeland Terrier,14,15,17
+122,121,Manchester Terrier (Standard),16,17,18
+123,122,Poodle Miniature,15,20,20
+124,123,Pug,11,14,22
+125,124,Puli,17,29,33
+126,125,Schipperke,13,12,18
+127,126,Scottish Terrier,12,18,22
+128,127,Sealyham Terrier,12,18,20
+129,128,Shetland Sheepdog (Sheltie),16,14,20
+130,129,Shiba Inu,16,15,30
+131,130,Shih Tzu,11,9,16
+132,131,Silky Terrier,10,8,11
+133,132,Skye Terrier,10,25,25
+134,133,Tibetan Spaniel,10,9,15
+135,134,Tibetan Terrier,17,20,30
+136,135,Welsh Terrier,15,20,21
+137,136,West Highland White Terrier,11,13,15
+138,137,Whippet,22,27,30
+139,138,Affenpinscher,12,8,12
+140,139,Chihuahua,9,2,5
+141,140,Chinese Crested,13,5,12
+142,141,Italian Greyhound,15,6,10
+143,142,Japanese Chin,11,4,11
+144,143,Maltese,10,4,6
+145,144,Manchester Terrier (Toy),12,6,8
+146,145,Papillon,11,5,10
+147,146,Pomeranian,12,3,7
+148,147,Poodle Toy,10,10,10
+149,148,Toy Fox Terrier,10,4,7
+150,149,Yorkshire Terrier,8,3,7
